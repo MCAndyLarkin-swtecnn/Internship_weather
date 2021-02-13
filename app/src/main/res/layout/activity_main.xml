@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/backGr"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="390dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="50sp">
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:columnCount="2"
+            android:rowCount="2">
+
+            <TextView
+                style="@style/lef_text"
+                android:layout_width="250dp"
+                android:layout_height="36dp"
+                android:layout_columnSpan="2"
+                android:text="February 7, 2020" />
+
+            <ImageView
+                android:layout_width="202dp"
+                android:layout_height="108dp"
+                android:layout_row="1"
+                android:layout_column="0"
+                android:layout_columnSpan="1"
+                app:srcCompat="@drawable/rain" />
+
+            <TextView
+                style="@style/lef_grade"
+                android:layout_width="110dp"
+                android:layout_height="69dp"
+                android:layout_row="1"
+                android:layout_column="1"
+                android:layout_columnSpan="1"
+                android:gravity="bottom"
+                android:text="23\u00B0" />
+        </GridLayout>
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:columnCount="2"
+            android:rowCount="2">
+
+            <TextView
+                style="@style/lef_text"
+                android:layout_width="250dp"
+                android:layout_height="36dp"
+                android:layout_columnSpan="2"
+                android:text="February 8, 2020" />
+
+            <ImageView
+                android:layout_width="202dp"
+                android:layout_height="108dp"
+                android:layout_row="1"
+                android:layout_column="0"
+                android:layout_columnSpan="1"
+                app:srcCompat="@drawable/cloudy" />
+
+            <TextView
+                style="@style/lef_grade"
+                android:layout_width="110dp"
+                android:layout_height="69dp"
+                android:layout_row="1"
+                android:layout_column="1"
+                android:layout_columnSpan="1"
+                android:gravity="bottom"
+                android:text="23\u00B0" />
+        </GridLayout>
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="142dp"
+            android:columnCount="2"
+            android:rowCount="2">
+
+            <TextView
+                style="@style/lef_text"
+                android:layout_width="250dp"
+                android:layout_height="36dp"
+                android:layout_columnSpan="2"
+                android:text="February 9, 2020" />
+
+            <ImageView
+                android:layout_width="202dp"
+                android:layout_height="108dp"
+                android:layout_row="1"
+                android:layout_column="0"
+                android:layout_columnSpan="1"
+                app:srcCompat="@drawable/partly_cloudy" />
+
+            <TextView
+                style="@style/lef_grade"
+                android:layout_width="110dp"
+                android:layout_height="69dp"
+                android:layout_row="1"
+                android:layout_column="1"
+                android:layout_columnSpan="1"
+                android:gravity="bottom"
+                android:text="25\u00B0" />
+        </GridLayout>
+    </LinearLayout>
+
+    <GridLayout
+        android:layout_width="428dp"
+        android:layout_height="match_parent"
+        android:columnCount="2"
+        android:rowCount="4">
+
+        <CheckBox
+            android:id="@+id/Shlang"
+            android:layout_width="match_parent"
+            android:layout_height="240dp"
+            android:layout_columnSpan="2"
+            android:layout_margin="45sp"
+            android:background="@drawable/sprinkler"
+            android:button="@null"
+            android:contentDescription="Shlungs vodoi brizguet"
+
+            android:checked="true"
+            android:scaleY="1.2" />
+
+        <TextView
+            style="@style/all_text"
+            android:layout_width="214sp"
+            android:layout_height="70sp"
+            android:layout_row="1"
+            android:layout_column="1"
+            android:text="Humidity" />
+
+        <TextView
+            style="@style/all_text"
+            android:layout_width="214sp"
+            android:layout_height="75sp"
+            android:layout_row="2"
+            android:layout_column="1"
+            android:text="73%" />
+
+        <TextView
+            style="@style/all_text"
+            android:layout_width="214sp"
+            android:layout_height="75sp"
+            android:layout_row="2"
+            android:layout_column="0"
+            android:text="24\u00B0" />
+
+        <TextView
+            style="@style/all_text"
+            android:layout_width="214sp"
+            android:layout_height="70sp"
+            android:layout_row="1"
+            android:layout_column="0"
+            android:text="Temp" />
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="340sp"
+            android:layout_row="3"
+            android:layout_column="0"
+            android:layout_columnSpan="2"
+            android:layout_gravity="top"
+            android:background="@drawable/icon_water"
+            android:scaleX=".5"
+            android:scaleY=".65"
+            android:translationY="-55sp" />
+
+        <TextView
+            style="@style/notif"
+            android:id="@+id/notific"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_row="3"
+            android:layout_column="1"
+            android:background="@drawable/orange_circle"
+            android:paddingTop="18sp"
+            android:textSize="30sp"
+            app:drawableTintMode="add" />
+    </GridLayout>
+
+    <LinearLayout
+        android:id="@+id/lst_rht"
+        android:layout_width="434dp"
+        android:layout_height="match_parent"
+        android:divider="@color/text_col"
+
+
+        android:dividerHeight="10sp"
+        android:orientation="vertical"
+        android:paddingHorizontal="20sp"
+        android:paddingVertical="30sp"
+        android:showDividers="middle|end">
+
+        <LinearLayout
+
+            style="@style/rig_mem">
+
+            <CheckBox
+                android:contentDescription="@string/fall_tsvetochkee"
+                android:layout_width="50sp"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/text_col"
+                android:textSize="30sp"
+                android:id="@+id/leftCheck1" />
+
+            <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+                style="@style/rig_text"
+                android:layout_height="wrap_content"
+                android:text="Backyard"
+                android:id="@+id/rig_text1"/>
+
+            <CheckBox
+                android:id="@+id/rightCheck1"
+                style="@style/rig_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:scaleX="2"
+                android:scaleY="2"/>
+        </LinearLayout>
+
+        <LinearLayout style="@style/rig_mem">
+
+            <CheckBox
+                android:contentDescription="@string/fall_tsvetochkee"
+                android:layout_width="50sp"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/text_col"
+                android:textSize="30sp"
+                android:id="@+id/leftCheck2"/>
+
+            <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+                style="@style/rig_text"
+                android:layout_height="wrap_content"
+                android:text="Back Patio"
+                android:id="@+id/rig_text2"/>
+
+            <CheckBox
+                style="@style/rig_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:scaleX="2"
+                android:scaleY="2"
+                android:id="@+id/rightCheck2"/>
+        </LinearLayout>
+
+        <LinearLayout style="@style/rig_mem">
+
+            <CheckBox
+                android:contentDescription="@string/fall_tsvetochkee"
+                android:layout_width="50sp"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/text_col"
+                android:textSize="30sp"
+                android:id="@+id/leftCheck3"/>
+
+            <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+                style="@style/rig_text"
+                android:layout_height="wrap_content"
+                android:text="Front Yard"
+                android:id="@+id/rig_text3"/>
+
+            <CheckBox
+                style="@style/rig_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:textSize="30sp"
+                android:scaleX="2"
+                android:scaleY="2"
+                android:id="@+id/rightCheck3"/>
+        </LinearLayout>
+
+        <LinearLayout style="@style/rig_mem">
+
+            <CheckBox
+                android:contentDescription="@string/fall_tsvetochkee"
+                android:layout_width="50sp"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/text_col"
+                android:textSize="30sp"
+                android:id="@+id/leftCheck4"/>
+
+            <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+                style="@style/rig_text"
+                android:layout_height="wrap_content"
+                android:text="Garden"
+                android:id="@+id/rig_text4"/>
+
+            <CheckBox
+                android:id="@+id/rightCheck4"
+                style="@style/rig_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:scaleX="2"
+                android:scaleY="2"/>
+        </LinearLayout>
+
+        <LinearLayout style="@style/rig_mem">
+
+            <CheckBox
+                android:contentDescription="@string/fall_tsvetochkee"
+                android:id="@+id/leftCheck5"
+                android:layout_width="50sp"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/text_col"
+                android:textSize="30sp"/>
+
+            <TextView xmlns:android="http://schemas.android.com/apk/res/android"
+                style="@style/rig_text"
+                android:layout_height="wrap_content"
+                android:text="Porch"
+                android:id="@+id/rig_text5"/>
+
+            <CheckBox
+                android:id="@+id/rightCheck5"
+                style="@style/rig_radio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="false"
+                android:scaleX="2"
+                android:scaleY="2"/>
+        </LinearLayout>
+
+
+    </LinearLayout>
+
+</LinearLayout>
+
+<!--Поливалка это чекбокс, а облака это текст, я радиобат это чекбокс-->

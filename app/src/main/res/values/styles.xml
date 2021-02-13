@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="rig_mem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">150sp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingHorizontal">10sp</item>
+        <item name="android:paddingVertical">40sp</item>
+    </style>
+</resources>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="rig_mem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">140sp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingHorizontal">10sp</item>
+        <item name="android:paddingVertical">40sp</item>
+    </style>
+    <style name="all_text">
+        <item name="android:textColor">@color/text_col</item>
+        <item name="android:textSize">50sp</item>
+        <item name="fontFamily">sans-serif-thin</item>
+    </style>
+    <style name="lef_text">
+        <item name="android:textColor">@color/text_col</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+    <style name="lef_grade">
+        <item name="android:textColor">@color/text_col</item>
+        <item name="android:textSize">60sp</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="rig_text">
+        <item name="android:textColor">@color/text_col</item>
+        <item name="fontFamily">sans-serif-thin</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textAlignment">textEnd</item>
+        <item name="android:layout_width">270sp</item>
+        <item name="android:paddingRight">40sp</item>
+    </style>
+    <style name="rig_text_port">
+        <item name="android:textColor">@color/text_col</item>
+        <item name="fontFamily">sans-serif-thin</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:textAlignment">textEnd</item>
+        <item name="android:layout_width">220sp</item>
+        <item name="android:paddingRight">40sp</item>
+    </style>
+    <style name="rig_radio">
+        <item name="android:button">@drawable/rad_but</item>
+        <item name="android:textSize">30sp</item>
+        <item name="drawableSize">590sp</item>
+    </style>
+    <style name="notif">
+        <item name="android:textAlignment">center</item>
+    </style>
+</resources>
