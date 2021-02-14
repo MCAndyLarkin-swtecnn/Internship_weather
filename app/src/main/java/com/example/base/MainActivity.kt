@@ -12,9 +12,14 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Config
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.annotation.RequiresApi
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import java.lang.Exception
 
 object polivEngine{
     val ZONES = 5
@@ -32,12 +37,24 @@ class MainActivity : AppCompatActivity() {
     lateinit var TodayCheck: Array<CheckBox>
     lateinit var TomorrowCheck: Array<CheckBox>
     lateinit var RigText: Array<TextView>
-
+    fun fakeVals() : List<Triple<String,Int, Short>>{
+        return mutableListOf(Triple("February 14, 2021", R.drawable.cloudy, 23),
+                Triple("February 15, 2021", R.drawable.rain, 24),
+                Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
+        )
+    }
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         Log.d("Main", "Created")
+        if(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            var recyClouds: RecyclerView = findViewById(R.id.recyCloud)
+            recyClouds.layoutManager = LinearLayoutManager(this)
+            recyClouds.adapter = MyAdapter(fakeVals())
+        }
+
+
         var not: TextView = findViewById(R.id.notific)
         not.text = polivEngine.count_of_notif.toString()
         if(not.text.toString().toInt() == 0) not.background = getDrawable(R.drawable.nut)
@@ -138,6 +155,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(applicationContext, "LAND))",Toast.LENGTH_SHORT)
             Log.d("Ori", "Land")
         }
+    }
+    class MyAdapter(private var values : List<Triple<String, Int, Short>>): RecyclerView.Adapter<MyAdapter.ViewHolder>() {
+        class ViewHolder(itemView: View?) : RecyclerView.ViewHolder(
+                itemView?:throw object : Exception("Pizdec"){}
+        ){
+            var imgView: ImageView? = null
+            var txtView: TextView? = null
+            var gradeView: TextView? = null
+            init{
+                imgView = itemView?.findViewById(R.id.mem_im)
+                txtView = itemView?.findViewById(R.id.mem_text)
+                gradeView = itemView?.findViewById(R.id.mem_grd)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder
+                = ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.mem1,
+                parent,false))
+
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            holder.imgView?.setImageResource(values[position].second)
+            holder.txtView?.text = values[position].first
+            holder.gradeView?.text = "${values[position].third}\u00B0"
+        }
+
+        override fun getItemCount() = values.size
     }
 }
 
