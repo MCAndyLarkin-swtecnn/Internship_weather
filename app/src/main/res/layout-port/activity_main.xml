@@ -5,16 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/backGr"
-    tools:context=".MainActivity">
+    tools:context=".PolyVanko.MainActivity">
 
     <CheckBox
         android:id="@+id/leftCheck3"
-        android:contentDescription="@string/fall_tsvetochkee"
         android:layout_width="50sp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:buttonTint="@color/text_col"
+        android:contentDescription="@string/fall_tsvetochkee"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/leftCheck4"
         app:layout_constraintStart_toEndOf="@+id/rig_text3" />
@@ -25,10 +25,10 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:text="Front Yard"
         app:layout_constraintBottom_toTopOf="@+id/rig_text4"
-        app:layout_constraintStart_toEndOf="@+id/rightCheck3"
-        android:layout_marginBottom="32dp" />
+        app:layout_constraintStart_toEndOf="@+id/rightCheck3" />
 
     <CheckBox
         android:id="@+id/rightCheck3"
@@ -47,12 +47,12 @@
 
     <CheckBox
         android:id="@+id/leftCheck2"
-        android:contentDescription="@string/fall_tsvetochkee"
         android:layout_width="50sp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:buttonTint="@color/text_col"
+        android:contentDescription="@string/fall_tsvetochkee"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/leftCheck3"
         app:layout_constraintStart_toEndOf="@+id/rig_text2" />
@@ -77,10 +77,10 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:text="Back Patio"
         app:layout_constraintBottom_toTopOf="@+id/rig_text3"
-        app:layout_constraintStart_toEndOf="@+id/rightCheck2"
-        android:layout_marginBottom="32dp"/>
+        app:layout_constraintStart_toEndOf="@+id/rightCheck2" />
 
     <TextView
         android:id="@+id/rig_text1"
@@ -88,10 +88,10 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:text="Backyard"
         app:layout_constraintBottom_toTopOf="@+id/rig_text2"
-        app:layout_constraintStart_toEndOf="@+id/rightCheck1"
-        android:layout_marginBottom="32dp"/>
+        app:layout_constraintStart_toEndOf="@+id/rightCheck1" />
 
     <CheckBox
         android:id="@+id/rightCheck1"
@@ -109,13 +109,13 @@
 
     <CheckBox
         android:id="@+id/leftCheck1"
-        android:contentDescription="@string/fall_tsvetochkee"
         android:layout_width="50sp"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginLeft="32dp"
         android:layout_marginBottom="32dp"
         android:buttonTint="@color/text_col"
+        android:contentDescription="@string/fall_tsvetochkee"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/leftCheck2"
         app:layout_constraintStart_toEndOf="@+id/rig_text1" />
@@ -213,6 +213,12 @@
         android:text="24\u00B0"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView5" />
+
+    <com.example.base.PolyVanko.mCustomView
+        android:layout_width="700dp"
+        android:layout_height="700dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <TextView
         android:id="@+id/textView3"
@@ -332,12 +338,12 @@
 
     <CheckBox
         android:id="@+id/leftCheck4"
-        android:contentDescription="Zavtra ne poliyom tsvetochkee"
         android:layout_width="50sp"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
         android:layout_marginLeft="32dp"
+        android:layout_marginBottom="32dp"
         android:buttonTint="@color/text_col"
+        android:contentDescription="Zavtra ne poliyom tsvetochkee"
         android:textSize="30sp"
         app:layout_constraintBottom_toTopOf="@+id/leftCheck5"
         app:layout_constraintStart_toEndOf="@+id/rig_text4" />
@@ -358,13 +364,13 @@
 
     <CheckBox
         android:id="@+id/leftCheck5"
-        android:contentDescription="@string/fall_tsvetochkee"
         android:layout_width="50sp"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginLeft="32dp"
         android:layout_marginBottom="32dp"
         android:buttonTint="@color/text_col"
+        android:contentDescription="@string/fall_tsvetochkee"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@+id/rig_text5" />

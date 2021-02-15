@@ -1,16 +1,9 @@
-package com.example.base
+package com.example.base.PolyVanko
 
-import android.app.ListActivity
-import android.content.Intent
-import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.content.res.Resources
-import android.graphics.Color
-import android.media.Image
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Config
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +12,7 @@ import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.base.R
 import java.lang.Exception
 
 object polivEngine{
@@ -49,24 +43,25 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         Log.d("Main", "Created")
         if(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            var recyClouds: RecyclerView = findViewById(R.id.recyCloud)
+            val recyClouds: RecyclerView = findViewById(R.id.recyCloud)
             recyClouds.layoutManager = LinearLayoutManager(this)
             recyClouds.adapter = MyAdapter(fakeVals())
         }
 
 
-        var not: TextView = findViewById(R.id.notific)
+        val not: TextView = findViewById(R.id.notific)
         not.text = polivEngine.count_of_notif.toString()
         if(not.text.toString().toInt() == 0) not.background = getDrawable(R.drawable.nut)
         not.setOnClickListener {
             val count = not.text.toString().toInt()
             if (count > 0){
-                Toast.makeText(this,"Завтра все еще Зима",Toast.LENGTH_SHORT).show()
+                Log.d("Notif", "Enable$count")
+                Toast.makeText(this,"Завтра все еще Зима",Toast.LENGTH_LONG).show()
                 not.text = (count-1).toString()
                 polivEngine.count_of_notif = count-1
                 if (count == 1) not.background = getDrawable(R.drawable.nut)
             } else
-                Toast.makeText(this,"Уведомлений больше нет",Toast.LENGTH_SHORT).show()
+                Toast.makeText(this,"Уведомлений больше нет",Toast.LENGTH_LONG).show()
         }
         TodayCheck = arrayOf(
             findViewById(R.id.rightCheck1),
@@ -102,15 +97,21 @@ class MainActivity : AppCompatActivity() {
             if (shlang.isChecked){
                 polivEngine.brizg = true
                 onPrediction()
+                for (chB in TomorrowCheck){
+                    chB.isClickable = true
+                }
                 shlang.contentDescription = "Shlungs vodoi brizguet"
             }
             else {
                 polivEngine.brizg = false
-                for (chB in TomorrowCheck) chB.isChecked = false
+                for (chB in TomorrowCheck){
+                    chB.isChecked = false
+                    chB.isClickable = false
+                }
                 shlang.contentDescription = "Shlungs vodoi ne brizguet"
             }
         }
-        for (ch in 0..(polivEngine.ZONES-1)){
+        for (ch in 0..(polivEngine.ZONES -1)){
             TomorrowCheck[ch].setOnClickListener {
                 if (TomorrowCheck[ch].isChecked){
                     polivEngine.activTomorrow.add(ch)
@@ -139,7 +140,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     fun setEnable(i: Int){
-        if(i in 0..(polivEngine.ZONES-1)){
+        if(i in 0..(polivEngine.ZONES -1)){
             TodayCheck[i].isChecked = true
             RigText[i].setTextColor(getResources().getColor(R.color.text_active_col))
         }
@@ -171,7 +172,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder
-                = ViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.mem1,
+                = ViewHolder(LayoutInflater.from(parent.context).inflate(
+            R.layout.mem1,
                 parent,false))
 
 
