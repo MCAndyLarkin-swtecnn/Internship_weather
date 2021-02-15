@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.base.R
 import java.lang.Exception
 
+
 object polivEngine{
     val ZONES = 5
     var count_of_notif = 1
@@ -25,17 +26,25 @@ object polivEngine{
         2,4
     )
     var brizg: Boolean = true
+    var polivPower: Int = 1
 }
 class MainActivity : AppCompatActivity() {
 
     lateinit var TodayCheck: Array<CheckBox>
     lateinit var TomorrowCheck: Array<CheckBox>
     lateinit var RigText: Array<TextView>
+    var myslider: mCustomView? = null
     fun fakeVals() : List<Triple<String,Int, Short>>{
         return mutableListOf(Triple("February 14, 2021", R.drawable.cloudy, 23),
                 Triple("February 15, 2021", R.drawable.rain, 24),
                 Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
         )
+    }
+
+    override fun onPause() {
+        myslider?.let{polivEngine.polivPower = myslider?.getVal() ?: 1}
+        Log.d("Power", "save: ${polivEngine.polivPower}")
+        super.onPause()
     }
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,7 +64,6 @@ class MainActivity : AppCompatActivity() {
         not.setOnClickListener {
             val count = not.text.toString().toInt()
             if (count > 0){
-                Log.d("Notif", "Enable$count")
                 Toast.makeText(this,"Завтра все еще Зима",Toast.LENGTH_LONG).show()
                 not.text = (count-1).toString()
                 polivEngine.count_of_notif = count-1
@@ -84,19 +92,26 @@ class MainActivity : AppCompatActivity() {
                 findViewById(R.id.rig_text4),
                 findViewById(R.id.rig_text5),
         )
+        if(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            myslider = findViewById(R.id.mySlider)
+            Log.d("Power", "Load: ${polivEngine.polivPower}")
+        }
         val s:CheckBox = findViewById(R.id.leftCheck1)
         val shlang: CheckBox = findViewById(R.id.Shlang)
         if(polivEngine.brizg){
             shlang.isChecked = true
             shlang.contentDescription = "Shlungs vodoi brizguet"
+            myslider?.VklVikl(true, polivEngine.polivPower)
         } else{
             shlang.isChecked = false
             shlang.contentDescription = "Shlungs vodoi ne brizguet"
+            myslider?.VklVikl(false)
         }
         shlang.setOnClickListener{
             if (shlang.isChecked){
                 polivEngine.brizg = true
                 onPrediction()
+                myslider?.let{it.VklVikl(true, polivEngine.polivPower)}
                 for (chB in TomorrowCheck){
                     chB.isClickable = true
                 }
@@ -104,6 +119,10 @@ class MainActivity : AppCompatActivity() {
             }
             else {
                 polivEngine.brizg = false
+                myslider?.let{
+                    polivEngine.polivPower = myslider!!.getVal()
+                    it.VklVikl(false)
+                }
                 for (chB in TomorrowCheck){
                     chB.isChecked = false
                     chB.isClickable = false
@@ -185,5 +204,6 @@ class MainActivity : AppCompatActivity() {
 
         override fun getItemCount() = values.size
     }
+
 }
 
