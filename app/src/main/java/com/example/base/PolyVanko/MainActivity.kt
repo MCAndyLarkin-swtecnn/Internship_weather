@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.base.R
 import java.lang.Exception
-
+//Next will added MT
 
 object polivEngine{
     const val ZONES = 5
