@@ -198,12 +198,13 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView5" />
 
-    <com.example.base.PolyVanko.mCustomView
+    <com.example.base.PolyVanko.MCustomView
         android:id="@+id/mySlider"
         android:layout_width="450dp"
         android:layout_height="450dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:current_value="2"/>
 
     <CheckBox
         android:id="@+id/Shlang"

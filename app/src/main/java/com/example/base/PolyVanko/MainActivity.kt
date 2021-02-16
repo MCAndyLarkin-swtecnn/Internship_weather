@@ -1,5 +1,6 @@
 package com.example.base.PolyVanko
 
+import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +18,7 @@ import java.lang.Exception
 
 
 object polivEngine{
-    val ZONES = 5
+    const val ZONES = 5
     var count_of_notif = 1
     var activTomorrow: ArrayList <Int> = arrayListOf(
             0,1,4
@@ -26,15 +27,15 @@ object polivEngine{
         2,4
     )
     var brizg: Boolean = true
-    var polivPower: Int = 1
+    var savedPolivPower: MCustomView.CurValue? = null
 }
 class MainActivity : AppCompatActivity() {
 
-    lateinit var TodayCheck: Array<CheckBox>
-    lateinit var TomorrowCheck: Array<CheckBox>
-    lateinit var RigText: Array<TextView>
-    var myslider: mCustomView? = null
-    fun fakeVals() : List<Triple<String,Int, Short>>{
+    private lateinit var TodayCheck: Array<CheckBox>
+    private lateinit var TomorrowCheck: Array<CheckBox>
+    private lateinit var RigText: Array<TextView>
+    private var myslider: MCustomView? = null
+    private fun fakeVals() : List<Triple<String,Int, Short>>{
         return mutableListOf(Triple("February 14, 2021", R.drawable.cloudy, 23),
                 Triple("February 15, 2021", R.drawable.rain, 24),
                 Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
@@ -42,23 +43,53 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        myslider?.let{polivEngine.polivPower = myslider?.getVal() ?: 1}
-        Log.d("Power", "save: ${polivEngine.polivPower}")
+        myslider?.let{
+            polivEngine.savedPolivPower = myslider!!.getVal()
+        }
         super.onPause()
     }
+    @SuppressLint("UseCompatLoadingForDrawables")
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        Log.d("Main", "Created")
-        if(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+
+        TodayCheck = arrayOf(
+                findViewById(R.id.rightCheck1),
+                findViewById(R.id.rightCheck2),
+                findViewById(R.id.rightCheck3),
+                findViewById(R.id.rightCheck4),
+                findViewById(R.id.rightCheck5)
+        )
+        TomorrowCheck = arrayOf(
+                findViewById(R.id.leftCheck1),
+                findViewById(R.id.leftCheck2),
+                findViewById(R.id.leftCheck3),
+                findViewById(R.id.leftCheck4),
+                findViewById(R.id.leftCheck5)
+        )
+        RigText = arrayOf(
+                findViewById(R.id.rig_text1),
+                findViewById(R.id.rig_text2),
+                findViewById(R.id.rig_text3),
+                findViewById(R.id.rig_text4),
+                findViewById(R.id.rig_text5),
+        )
+
+        if(resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {//RecyclerView exist only in  Landscape
             val recyClouds: RecyclerView = findViewById(R.id.recyCloud)
             recyClouds.layoutManager = LinearLayoutManager(this)
             recyClouds.adapter = MyAdapter(fakeVals())
+        } else{                                     //Custom View exist only in Portrait
+            myslider = findViewById(R.id.mySlider)
+            polivEngine.savedPolivPower?.let{
+                myslider!!.setCurrentValue(polivEngine.savedPolivPower!!)
+            } ?: let{
+                myslider!!.initAttrs()
+            }
         }
 
-
-        val not: TextView = findViewById(R.id.notific)
+        val not: TextView = findViewById(R.id.notific)//Orange notification circle
         not.text = polivEngine.count_of_notif.toString()
         if(not.text.toString().toInt() == 0) not.background = getDrawable(R.drawable.nut)
         not.setOnClickListener {
@@ -71,47 +102,22 @@ class MainActivity : AppCompatActivity() {
             } else
                 Toast.makeText(this,"Уведомлений больше нет",Toast.LENGTH_LONG).show()
         }
-        TodayCheck = arrayOf(
-            findViewById(R.id.rightCheck1),
-            findViewById(R.id.rightCheck2),
-            findViewById(R.id.rightCheck3),
-            findViewById(R.id.rightCheck4),
-            findViewById(R.id.rightCheck5)
-        )
-        TomorrowCheck = arrayOf(
-            findViewById(R.id.leftCheck1),
-            findViewById(R.id.leftCheck2),
-            findViewById(R.id.leftCheck3),
-            findViewById(R.id.leftCheck4),
-            findViewById(R.id.leftCheck5)
-        )
-        RigText = arrayOf(
-                findViewById(R.id.rig_text1),
-                findViewById(R.id.rig_text2),
-                findViewById(R.id.rig_text3),
-                findViewById(R.id.rig_text4),
-                findViewById(R.id.rig_text5),
-        )
-        if(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
-            myslider = findViewById(R.id.mySlider)
-            Log.d("Power", "Load: ${polivEngine.polivPower}")
-        }
-        val s:CheckBox = findViewById(R.id.leftCheck1)
-        val shlang: CheckBox = findViewById(R.id.Shlang)
+
+
+        val shlang: CheckBox = findViewById(R.id.Shlang)//Checkbox polivaika
         if(polivEngine.brizg){
             shlang.isChecked = true
             shlang.contentDescription = "Shlungs vodoi brizguet"
-            myslider?.VklVikl(true, polivEngine.polivPower)
         } else{
             shlang.isChecked = false
             shlang.contentDescription = "Shlungs vodoi ne brizguet"
-            myslider?.VklVikl(false)
+            myslider?.Vikl()
         }
         shlang.setOnClickListener{
             if (shlang.isChecked){
                 polivEngine.brizg = true
                 onPrediction()
-                myslider?.let{it.VklVikl(true, polivEngine.polivPower)}
+                myslider?.Vkl()
                 for (chB in TomorrowCheck){
                     chB.isClickable = true
                 }
@@ -119,10 +125,7 @@ class MainActivity : AppCompatActivity() {
             }
             else {
                 polivEngine.brizg = false
-                myslider?.let{
-                    polivEngine.polivPower = myslider!!.getVal()
-                    it.VklVikl(false)
-                }
+                myslider?.Vikl()
                 for (chB in TomorrowCheck){
                     chB.isChecked = false
                     chB.isClickable = false
@@ -130,7 +133,8 @@ class MainActivity : AppCompatActivity() {
                 shlang.contentDescription = "Shlungs vodoi ne brizguet"
             }
         }
-        for (ch in 0..(polivEngine.ZONES -1)){
+
+        for (ch in 0 until polivEngine.ZONES){
             TomorrowCheck[ch].setOnClickListener {
                 if (TomorrowCheck[ch].isChecked){
                     polivEngine.activTomorrow.add(ch)
@@ -146,36 +150,36 @@ class MainActivity : AppCompatActivity() {
         onPrediction()
     }
 
-    fun onPrediction(){
+    private fun onPrediction(){
         for (i in polivEngine.activTomorrow){
             TomorrowCheck[i].isChecked = true
             TomorrowCheck[i].contentDescription = "Zavtra poliyom tsvetochkee"
         }
     }
 
-    fun onToday(){
+    private fun onToday(){
         for (i in polivEngine.activToday){
             setEnable(i)
         }
     }
-    fun setEnable(i: Int){
-        if(i in 0..(polivEngine.ZONES -1)){
+    private fun setEnable(i: Int){
+        if(i in 0 until polivEngine.ZONES){
             TodayCheck[i].isChecked = true
-            RigText[i].setTextColor(getResources().getColor(R.color.text_active_col))
+            RigText[i].setTextColor(resources.getColor(R.color.text_active_col))
         }
     }
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
-        Toast.makeText(applicationContext, "Anything",Toast.LENGTH_SHORT)
-        if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
-            Toast.makeText(applicationContext, "Portrat((",Toast.LENGTH_SHORT)
-            Log.d("Ori", "pORT")
-        }else
-        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE){
-            Toast.makeText(applicationContext, "LAND))",Toast.LENGTH_SHORT)
-            Log.d("Ori", "Land")
-        }
-    }
+//    override fun onConfigurationChanged(newConfig: Configuration) {
+//        super.onConfigurationChanged(newConfig)
+//        Toast.makeText(applicationContext, "Anything",Toast.LENGTH_SHORT)
+//        if (newConfig.orientation == Configuration.ORIENTATION_PORTRAIT){
+//            Toast.makeText(applicationContext, "Portrat((",Toast.LENGTH_SHORT)
+//            Log.d("Ori", "pORT")
+//        }else
+//        if (newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE){
+//            Toast.makeText(applicationContext, "LAND))",Toast.LENGTH_SHORT)
+//            Log.d("Ori", "Land")
+//        }
+//    }
     class MyAdapter(private var values : List<Triple<String, Int, Short>>): RecyclerView.Adapter<MyAdapter.ViewHolder>() {
         class ViewHolder(itemView: View?) : RecyclerView.ViewHolder(
                 itemView?:throw object : Exception("Pizdec"){}
@@ -199,7 +203,7 @@ class MainActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.imgView?.setImageResource(values[position].second)
             holder.txtView?.text = values[position].first
-            holder.gradeView?.text = "${values[position].third}\u00B0"
+            """${values[position].third}°""".also { holder.gradeView?.text = it }
         }
 
         override fun getItemCount() = values.size

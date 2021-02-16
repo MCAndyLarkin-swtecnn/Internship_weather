@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <declare-styleable name="mCustomView">
+    <declare-styleable name="MCustomView">
         <attr name="current_value" format="integer" />
     </declare-styleable>
 </resources>
