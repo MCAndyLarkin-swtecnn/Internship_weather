@@ -18,6 +18,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RetrofitClient
 import api.model.CurrentWeatherForecast
+import api.model.DailyForecast
+import api.model.WeatherForecast
 import com.example.base.R
 import retrofit2.Invocation.of
 import retrofit2.Response
@@ -455,21 +457,36 @@ class MainActivity : AppCompatActivity() {
     }
 */
 
-    class MyAdapter() :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
-//        var wetherChannel: WetherChannel = UseThread()
+    class MyAdapter :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
         private fun buildForacstData(count: Int = 1): List<Triple<String, Int, Short>> {
-            return mutableListOf(
-                Triple("February 14, 2021", R.drawable.cloudy, 23),
-                Triple("February 15, 2021", R.drawable.rain, 24),
-                Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
-            )
-//            return (0 until count)//it == 0 is today, it == 1 is yesterday etc...
-//                .map { elem ->
-//                    Triple(wetherChannel.getDateLine(elem),
-//                        wetherChannel.getWetherImg(elem),
-//                        wetherChannel.getTemp(elem).also { Log.e("Temperature:", "$it") }
-//                    )
-//                }
+//            return mutableListOf(
+//                Triple("February 14, 2021", R.drawable.cloudy, 23),
+//                Triple("February 15, 2021", R.drawable.rain, 24),
+//                Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
+//            )
+            var forecast: List<DailyForecast>? = null
+            val forecast_connection: Response<WeatherForecast>? = RetrofitClient.getWeatherForecast().execute()
+            forecast_connection?.let {
+                forecast = forecast_connection.body()!!.daily
+            } ?: let {
+                Log.e("Forecast_Thrd", "null")
+            }
+
+
+            return forecast?.let {
+                (0 until count)//it == 0 is today, it == 1 is yesterday etc...
+                        .map { i ->
+                            Triple(forecast!![i].getDate(),
+                                    R.drawable.cloudy,
+                                    forecast!![i].temp.max.toInt().toShort()
+                            )
+                        }
+            } ?: let{
+                (0 until count)
+                        .map{
+                            Triple("No Data",R.drawable.nodata,-273)
+                        }
+            }
         }
 
         private var values: List<Triple<String, Int, Short>> = buildForacstData(3)
@@ -487,15 +504,15 @@ class MainActivity : AppCompatActivity() {
                 gradeView = itemView?.findViewById(R.id.mem_grd)
             }
         }
-
+        //onCreateViewHolder creates holder ant init view for list
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder = ViewHolder(
             LayoutInflater.from(parent.context).inflate(
                 R.layout.mem1,
                 parent, false
             )
-        )
+        )//The hard
 
-
+        //Bind (Svyazivat') View with values
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.imgView?.setImageResource(values[position].second)
             holder.txtView?.text = values[position].first
@@ -503,6 +520,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun getItemCount() = values.size
+
+        ///!!!!
+        /// notifyDataSetChanged() - is funk, which call adapter to update data
 
     }
 
