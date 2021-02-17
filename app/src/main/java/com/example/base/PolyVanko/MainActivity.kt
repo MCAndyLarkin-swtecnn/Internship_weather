@@ -2,10 +2,7 @@ package com.example.base.PolyVanko
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Message
+import android.os.*
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +22,7 @@ import retrofit2.Response
 
 interface WetherChannel {
     //    var forecast: Response<WeatherForecast>?
+    fun fillTempAndHumidity()
     fun getTemp(plus: Int = 0): Short//returns 23 (Expm)
     fun getWetherImg(plus: Int = 0): Int//returns Image
     fun getDateLine(plus: Int = 0): String {//returns "February 16, 2020" (Expm)
@@ -45,14 +43,9 @@ object polivEngine{
 }
 
 class MainActivity : AppCompatActivity() {
-    var handler: Handler = @SuppressLint("HandlerLeak")
-    object : Handler() {
-        override fun handleMessage(msg: Message) {
-            val bundle = msg.data
-            findViewById<TextView>(R.id.Temp_val).text = bundle.getString("Temp")
-            findViewById<TextView>(R.id.Huidity_val).text = bundle.getString("Hum")
-        }
-    }
+    var wetherChannel: WetherChannel = UseThread()
+
+
     private lateinit var TodayCheck: Array<CheckBox>
     private lateinit var TomorrowCheck: Array<CheckBox>
     private lateinit var RigText: Array<TextView>
@@ -64,32 +57,12 @@ class MainActivity : AppCompatActivity() {
         }
         super.onPause()
     }
-    private fun fillCurTempAndHumidity(){
-        var humaLine: String
-        var tempLine: String
-        Thread(Runnable {
-            val msg: Message = handler.obtainMessage()
-            val bundle = Bundle()
-            val forecast: Response<CurrentWeatherForecast>? = RetrofitClient.getCurrentWeather().execute()
-            forecast?.let {
-                tempLine = forecast.body()!!.weather.temp.toString()
-                humaLine = forecast.body()!!.weather.humidity.toString()
-
-                bundle.putString("Temp",tempLine)
-                bundle.putString("Hum",humaLine)
-                msg.data = bundle
-                handler.sendMessage(msg)
-            } ?: let {
-                Log.e("Forecast", "null")
-            }
-        }).start()
-    }
     @SuppressLint("UseCompatLoadingForDrawables")
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        fillCurTempAndHumidity()
         setContentView(R.layout.activity_main)
+        wetherChannel.fillTempAndHumidity()
 
         TodayCheck = arrayOf(
             findViewById(R.id.rightCheck1),
@@ -204,6 +177,130 @@ class MainActivity : AppCompatActivity() {
             RigText[i].setTextColor(resources.getColor(R.color.text_active_col))
         }
     }
+
+    inner class UseThread : WetherChannel {
+        override fun fillTempAndHumidity() {
+            var humaLine: String
+            var tempLine: String
+            Thread(Runnable {
+                val msg: Message = handler.obtainMessage()
+                val bundle = Bundle()
+                val forecast: Response<CurrentWeatherForecast>? = RetrofitClient.getCurrentWeather().execute()
+                forecast?.let {
+                    tempLine = forecast.body()!!.weather.temp.toString()
+                    humaLine = forecast.body()!!.weather.humidity.toString()
+
+                    bundle.putString("Temp",tempLine)
+                    bundle.putString("Hum",humaLine)
+                    msg.data = bundle
+                    handler.sendMessage(msg)
+                } ?: let {
+                    Log.e("Forecast_Thrd", "null")
+                }
+            }).start()
+        }
+
+        //    override var forecast: Response<WeatherForecast>? = null
+        override fun getTemp(plus: Int): Short {
+//        var forecast: Response<WeatherForecast>?
+//        forecast = RetrofitClient.getWeatherForecast().execute()
+//        forecast?.let {
+//            Log.d("Forecast", forecast!!.message())
+//        } ?: let {
+//            Log.d("Forecast", "null")
+//                val handler =
+//                    @SuppressLint("HandlerLeak")
+//                    object : Handler() {
+//                        override fun handleMessage(msg: Message?) {
+//                            var recyClView: RecyclerView = findViewById(R.id.recyCloud)
+//
+//                        }
+//                    }
+//
+//                var line = 0
+
+
+//            Log.e("START", "1")
+//            Log.e("END", "3")
+            return (23 + plus).toShort()
+        }
+
+        override fun getWetherImg(plus: Int): Int {
+            return R.drawable.rain
+        }
+
+        override fun getDateLine(plus: Int): String {
+            return super.getDateLine(plus)
+        }
+    }
+    inner class UseAsyncTask : WetherChannel {
+        override fun fillTempAndHumidity() {
+            var myAsTask = MyAsTask()
+            myAsTask.execute()
+        }
+
+        //    override var forecast: Response<WeatherForecast>? = null
+        override fun getTemp(plus: Int): Short {
+//        var forecast: Response<WeatherForecast>?
+//        forecast = RetrofitClient.getWeatherForecast().execute()
+//        forecast?.let {
+//            Log.d("Forecast", forecast!!.message())
+//        } ?: let {
+//            Log.d("Forecast", "null")
+//                val handler =
+//                    @SuppressLint("HandlerLeak")
+//                    object : Handler() {
+//                        override fun handleMessage(msg: Message?) {
+//                            var recyClView: RecyclerView = findViewById(R.id.recyCloud)
+//
+//                        }
+//                    }
+//
+//                var line = 0
+
+
+//            Log.e("START", "1")
+//            Log.e("END", "3")
+            return (23 + plus).toShort()
+        }
+
+        override fun getWetherImg(plus: Int): Int {
+            return R.drawable.rain
+        }
+
+        override fun getDateLine(plus: Int): String {
+            return super.getDateLine(plus)
+        }
+
+        inner class MyAsTask : AsyncTask<Unit, Unit, Unit>() {
+            lateinit var humaLine: String
+            lateinit var tempLine: String
+            override fun doInBackground(vararg params: Unit?) {
+                val forecast: Response<CurrentWeatherForecast>? =
+                    RetrofitClient.getCurrentWeather().execute()
+                forecast?.let {
+                    tempLine = forecast.body()!!.weather.temp.toString()
+                    humaLine = forecast.body()!!.weather.humidity.toString()
+
+                } ?: let {
+                    Log.e("Forecast_Async", "null")
+                }
+            }
+
+            override fun onPreExecute() {
+                Log.e("Async", "OnPre")
+                super.onPreExecute()
+            }
+
+            override fun onPostExecute(result: Unit?) {
+                super.onPostExecute(result)
+                findViewById<TextView>(R.id.Temp_val).text = tempLine
+                findViewById<TextView>(R.id.Huidity_val).text = humaLine
+                Log.e("Async", "OnPost")
+            }
+
+        }
+    }
     class MyAdapter() :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
 //        var wetherChannel: WetherChannel = UseThread()
         private fun buildForacstData(count: Int = 1): List<Triple<String, Int, Short>> {
@@ -253,41 +350,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun getItemCount() = values.size
 
-//        inner class UseThread : WetherChannel {
-//            //    override var forecast: Response<WeatherForecast>? = null
-//            override fun getTemp(plus: Int): Short {
-////        var forecast: Response<WeatherForecast>?
-////        forecast = RetrofitClient.getWeatherForecast().execute()
-////        forecast?.let {
-////            Log.d("Forecast", forecast!!.message())
-////        } ?: let {
-////            Log.d("Forecast", "null")
-//                val handler =
-//                    @SuppressLint("HandlerLeak")
-//                    object : Handler() {
-//                        override fun handleMessage(msg: Message?) {
-//                            var recyClView: RecyclerView = findViewById(R.id.recyCloud)
-//
-//                        }
-//                    }
-//
-//                var line = 0
 
-//
-////            Log.e("START", "1")
-////            Log.e("END", "3")
-//                return (23 + plus + line).toShort()
-//            }
-//
-//            override fun getWetherImg(plus: Int): Int {
-//                return R.drawable.rain
-//            }
-//
-//            override fun getDateLine(plus: Int): String {
-//                return super.getDateLine(plus)
-//            }
-//
-//        }
 
 //        class UseAsyncTask : WetherChannel {
 //            override fun getTemp(plus: Int): Short {
@@ -304,6 +367,13 @@ class MainActivity : AppCompatActivity() {
 //        }
     }
 
-
+    var handler: Handler = @SuppressLint("HandlerLeak")
+    object : Handler() {
+        override fun handleMessage(msg: Message) {
+            val bundle = msg.data
+            findViewById<TextView>(R.id.Temp_val).text = bundle.getString("Temp")
+            findViewById<TextView>(R.id.Huidity_val).text = bundle.getString("Hum")
+        }
+    }
 }
 
