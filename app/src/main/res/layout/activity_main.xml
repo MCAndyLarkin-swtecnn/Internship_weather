@@ -10,7 +10,8 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyCloud"
         android:layout_width="390dp"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        tools:listitem="@layout/mem1">
 
     </androidx.recyclerview.widget.RecyclerView>
 
