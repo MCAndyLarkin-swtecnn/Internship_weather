@@ -8,4 +8,4 @@ data class CurrentWeatherForecast(
     val weather: CurrentWeather,
         @SerializedName("weather")
     val weatherImage: List<WeatherImage>
-)
+) : RetroDate

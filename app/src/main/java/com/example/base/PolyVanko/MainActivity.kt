@@ -17,26 +17,48 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RetrofitClient
-import api.model.CurrentWeatherForecast
-import api.model.DailyForecast
-import api.model.WeatherForecast
+import api.model.*
 import com.example.base.R
 import retrofit2.Invocation.of
 import retrofit2.Response
-
+import java.io.IOException
 
 //Next will added MT
 
 interface WetherChannel {
     //    var forecast: Response<WeatherForecast>?
     fun fillTempAndHumidity()
-    fun getTemp(plus: Int = 0): Short//returns 23 (Expm)
-    fun getWetherImg(plus: Int = 0): Int//returns Image
-    fun getDateLine(plus: Int = 0): String {//returns "February 16, 2020" (Expm)
-        return "Fabruary ${16+plus}, 2020"
-    }
 }
 
+interface  ThreadCallBack{
+    fun fillData(retroDate: RetroDate)
+}
+class MyCurrentThread(var callBack: ThreadCallBack) : Runnable{
+    var current: RetroDate? = null
+
+    override fun run() {
+        try{
+            current = RetrofitClient.getCurrentWeather().execute().body()
+        }catch (ex: IOException){
+            Log.e("CurrentThread", ex.message!!)
+        }
+        current?.let{this.callBack.fillData(it)}
+    }
+
+}
+class MyWeeklyThread(var callBack: ThreadCallBack) : Runnable{
+    var forecast: RetroDate? = null
+
+    override fun run() {
+        try{
+            forecast = RetrofitClient.getWeatherForecast().execute().body()
+        }catch (ex: IOException){
+            Log.e("WeeklyThread", ex.message!!)
+        }
+        forecast?.let{this.callBack.fillData(it)}
+    }
+
+}
 //For VM
 data class MyWether(
     var temp: String = "",
@@ -56,7 +78,8 @@ object polivEngine{
     var savedPolivPower: MCustomView.CurValue? = null
 }
 class MainActivity : AppCompatActivity() {
-    var wetherChannel: WetherChannel = UseAsyncTask()
+    var wetherChannel: WetherChannel = UseHandler()
+
     private lateinit var TodayCheck: Array<CheckBox>
     private lateinit var TomorrowCheck: Array<CheckBox>
     private lateinit var RigText: Array<TextView>
@@ -68,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         }
         super.onPause()
     }
+
     @SuppressLint("UseCompatLoadingForDrawables")
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,13 +103,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        when("View mode"){
-            "View model" -> {
-                //ViewModel Exp
+//        when("View mode"){
+//            "View model" -> {
+//                //ViewModel Exp
+//
+//            }
+//            else -> TODO()
+//        }
+//        wetherChannel.fillTempAndHumidity()
+        threadTodayFill()
 
-            }
-            else -> wetherChannel.fillTempAndHumidity()
-        }
 
         TodayCheck = arrayOf(
             findViewById(R.id.rightCheck1),
@@ -112,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {//RecyclerView exist only in  Landscape
             val recyClouds: RecyclerView = findViewById(R.id.recyCloud)
             recyClouds.layoutManager = LinearLayoutManager(this)
-            recyClouds.adapter = MyAdapter()
+            threadForecastFill(3)
         } else {                                     //Custom View exist only in Portrait
             myslider = findViewById(R.id.mySlider)
             polivEngine.savedPolivPower?.let {
@@ -201,59 +228,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    inner class UseThread : WetherChannel {
-        override fun fillTempAndHumidity() {
-            var humaLine: String
-            var tempLine: String
-            Thread(Runnable {
-                val forecast: Response<CurrentWeatherForecast>? = RetrofitClient.getCurrentWeather().execute()
-                forecast?.let {
-                    tempLine = forecast.body()!!.weather.temp.toString()
-                    humaLine = forecast.body()!!.weather.humidity.toString()
-
-                    this@MainActivity.runOnUiThread {
-                        (tempLine+"\u00B0").also { findViewById<TextView>(R.id.Temp_val).text = it }
-                        findViewById<TextView>(R.id.Huidity_val).text = humaLine+"%"
-                    }
-                } ?: let {
-                    Log.e("Forecast_Thrd", "null")
-                }
-            }).start()
-        }
-
-        //    override var forecast: Response<WeatherForecast>? = null
-        override fun getTemp(plus: Int): Short {
-//        var forecast: Response<WeatherForecast>?
-//        forecast = RetrofitClient.getWeatherForecast().execute()
-//        forecast?.let {
-//            Log.d("Forecast", forecast!!.message())
-//        } ?: let {
-//            Log.d("Forecast", "null")
-//                val handler =
-//                    @SuppressLint("HandlerLeak")
-//                    object : Handler() {
-//                        override fun handleMessage(msg: Message?) {
-//                            var recyClView: RecyclerView = findViewById(R.id.recyCloud)
-//
-//                        }
-//                    }
-//
-//                var line = 0
-
-
-//            Log.e("START", "1")
-//            Log.e("END", "3")
-            return (23 + plus).toShort()
-        }
-
-        override fun getWetherImg(plus: Int): Int {
-            return R.drawable.rain
-        }
-
-        override fun getDateLine(plus: Int): String {
-            return super.getDateLine(plus)
-        }
-    }
     inner class UseHandler : WetherChannel {
         override fun fillTempAndHumidity() {
             var humaLine: String
@@ -275,17 +249,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }).start()
         }
-        override fun getTemp(plus: Int): Short {
-            return (23 + plus).toShort()
-        }
-
-        override fun getWetherImg(plus: Int): Int {
-            return R.drawable.rain
-        }
-
-        override fun getDateLine(plus: Int): String {
-            return super.getDateLine(plus)
-        }
     }
     inner class UseAsyncTask : WetherChannel {
         override fun fillTempAndHumidity() {
@@ -293,17 +256,6 @@ class MainActivity : AppCompatActivity() {
             myAsTask.execute()
         }
 
-        override fun getTemp(plus: Int): Short {
-            return (23 + plus).toShort()
-        }
-
-        override fun getWetherImg(plus: Int): Int {
-            return R.drawable.rain
-        }
-
-        override fun getDateLine(plus: Int): String {
-            return super.getDateLine(plus)
-        }
 
         inner class MyAsTask : AsyncTask<Unit, Unit, Unit>() {
             lateinit var humaLine: String
@@ -457,39 +409,7 @@ class MainActivity : AppCompatActivity() {
     }
 */
 
-    class MyAdapter :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
-        private fun buildForacstData(count: Int = 1): List<Triple<String, Int, Short>> {
-//            return mutableListOf(
-//                Triple("February 14, 2021", R.drawable.cloudy, 23),
-//                Triple("February 15, 2021", R.drawable.rain, 24),
-//                Triple("February 16, 2021", R.drawable.partly_cloudy, 25)
-//            )
-            var forecast: List<DailyForecast>? = null
-            val forecast_connection: Response<WeatherForecast>? = RetrofitClient.getWeatherForecast().execute()
-            forecast_connection?.let {
-                forecast = forecast_connection.body()!!.daily
-            } ?: let {
-                Log.e("Forecast_Thrd", "null")
-            }
-
-
-            return forecast?.let {
-                (0 until count)//it == 0 is today, it == 1 is yesterday etc...
-                        .map { i ->
-                            Triple(forecast!![i].getDate(),
-                                    R.drawable.cloudy,
-                                    forecast!![i].temp.max.toInt().toShort()
-                            )
-                        }
-            } ?: let{
-                (0 until count)
-                        .map{
-                            Triple("No Data",R.drawable.nodata,-273)
-                        }
-            }
-        }
-
-        private var values: List<Triple<String, Int, Short>> = buildForacstData(3)
+    class MyAdapter(var values: List<Triple<String, Int, Short>>) :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
 
         class ViewHolder(itemView: View?) : RecyclerView.ViewHolder(
             itemView ?: throw object : Exception("Pizdec") {}
@@ -534,5 +454,76 @@ class MainActivity : AppCompatActivity() {
             (bundle.getString("Hum") + "%").also { findViewById<TextView>(R.id.Huidity_val).text = it }
         }
     }
+
+    fun threadTodayFill(){
+        val callBack  = object : ThreadCallBack{
+            override fun fillData(retroDate: RetroDate) {
+                (retroDate as? CurrentWeatherForecast)?.let{
+                    WETHER.setCurrent(retroDate)
+                    runOnUiThread(::updateWether)
+                }
+            }
+        }
+        val threadToday : MyCurrentThread = MyCurrentThread(callBack)
+        Thread(threadToday).start()
+    }
+    fun threadForecastFill(count : Int){
+        val callBack  = object : ThreadCallBack{
+            override fun fillData(retroDate: RetroDate) {
+                (retroDate as? WeatherForecast)?.let{
+                    WETHER.setForecast(retroDate, count)
+                    runOnUiThread(::updateForecast)
+                }
+            }
+        }
+        val threadToday = MyWeeklyThread(callBack)
+        Thread(threadToday).start()
+    }
+    object WETHER{
+        lateinit var Humidity: String
+        lateinit var Temperature: String
+        lateinit var forecastList : List<Triple<String, Int, Short>>
+
+        fun setCurrent(forecast: CurrentWeatherForecast){
+            Temperature = forecast.weather.temp.toString()
+            Humidity = forecast.weather.humidity.toString()
+        }
+        fun setForecast(forecast: WeatherForecast, count : Int) {
+            forecastList = (0 until count)//it == 0 is today, it == 1 is yesterday etc...
+                    .map { i ->
+                        Triple(forecast.daily[i].getDate(),
+                                R.drawable.cloudy,
+                                forecast.daily[i].temp.max.toInt().toShort()
+                        )
+                    }
+        }
+    }
+    private fun updateWether() {
+        findViewById<TextView>(R.id.Huidity_val).text = WETHER.Humidity
+        findViewById<TextView>(R.id.Temp_val).text = WETHER.Temperature
+    }
+    private fun updateForecast(){
+        findViewById<RecyclerView>(R.id.recyCloud).adapter = MyAdapter(WETHER.forecastList)
+    }
+
+//    private fun buildForacstData(count: Int = 1): List<Triple<String, Int, Short>> {
+//        var forecast: List<DailyForecast>? = null
+//        val forecast_connection: Response<WeatherForecast>? = RetrofitClient.getWeatherForecast().execute()
+//        forecast_connection?.let {
+//            forecast = forecast_connection.body()!!.daily
+//        } ?: let {
+//            Log.e("Forecast_Thrd", "null")
+//        }
+//
+//    }
 }
 
+
+
+/*
+    *Setting retuns type in Async
+    *and destruct memory lek with static class or Activity.callBack
+    *Test Async in Profiler
+ */
+
+//Thread нужно закрывать?
