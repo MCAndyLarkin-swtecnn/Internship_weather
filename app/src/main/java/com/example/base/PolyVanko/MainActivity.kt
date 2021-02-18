@@ -1,11 +1,9 @@
 package com.example.base.PolyVanko
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Loader
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.*
-import android.text.TextUtils
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -13,53 +11,67 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RetrofitClient
 import api.model.*
 import com.example.base.R
-import retrofit2.Invocation.of
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.core.Single
+import io.reactivex.rxjava3.schedulers.Schedulers
+import retrofit2.Call
 import retrofit2.Response
-import java.io.IOException
+import kotlin.collections.ArrayList
+
 
 //Next will added MT
-
-interface WetherChannel {
-    //    var forecast: Response<WeatherForecast>?
-    fun fillTempAndHumidity()
-}
-
-interface  ThreadCallBack{
+interface  SetRetroDataToUI{
     fun fillData(retroDate: RetroDate)
 }
-class MyCurrentThread(var callBack: ThreadCallBack) : Runnable{
+interface  GetDataFromRetro{
+    fun getForcast(): Call<WeatherForecast>
+    fun getCurrent(): Call<CurrentWeatherForecast>
+}
+//About Threads
+class WeatherForcastThread(var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro>, var mode: WETHER.Mode) : Runnable{
+
     var current: RetroDate? = null
 
     override fun run() {
         try{
-            current = RetrofitClient.getCurrentWeather().execute().body()
-        }catch (ex: IOException){
-            Log.e("CurrentThread", ex.message!!)
+            current = when(mode){
+                WETHER.Mode.CURRENT -> callBacks.second.getCurrent().execute().body()
+                WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
+            }
+        }catch (ex: Exception){
+            Log.e("Exception", ex.message!!)
         }
-        current?.let{this.callBack.fillData(it)}
+        current?.let{this.callBacks.first.fillData(it)}
     }
 
 }
-class MyWeeklyThread(var callBack: ThreadCallBack) : Runnable{
-    var forecast: RetroDate? = null
 
-    override fun run() {
-        try{
-            forecast = RetrofitClient.getWeatherForecast().execute().body()
-        }catch (ex: IOException){
-            Log.e("WeeklyThread", ex.message!!)
+//About Hendler
+
+
+//About Async
+class WeatherForcastAsync(
+        var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro>,
+        var mode: WETHER.Mode)
+    : AsyncTask<Unit, Unit, RetroDate>(){
+    override fun doInBackground(vararg params: Unit?): RetroDate? {
+        return  when(mode){
+            WETHER.Mode.CURRENT -> callBacks.second.getCurrent().execute().body()
+            WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
         }
-        forecast?.let{this.callBack.fillData(it)}
     }
-
+    override fun onPostExecute(result: RetroDate?) {
+        result?.let{callBacks.first.fillData(it)}
+        super.onPostExecute(result)
+    }
 }
-//For VM
+
+//About VM
 data class MyWether(
     var temp: String = "",
     val hum: String = ""
@@ -77,8 +89,31 @@ object polivEngine{
     var brizg: Boolean = true
     var savedPolivPower: MCustomView.CurValue? = null
 }
+object WETHER{
+    enum class Mode{
+        CURRENT,
+        FORWEEK
+    }
+    lateinit var Humidity: String
+    lateinit var Temperature: String
+    lateinit var forecastList : List<Triple<String, Int, Short>>
+    val FORCAST_LENGTH = 3
+
+    fun setCurrent(forecast: CurrentWeatherForecast){
+        Temperature = forecast.weather.temp.toString()
+        Humidity = forecast.weather.humidity.toString()
+    }
+    fun setForecast(forecast: WeatherForecast, count : Int) {
+        forecastList = (0 until count)//it == 0 is today, it == 1 is yesterday etc...
+                .map { i ->
+                    Triple(forecast.daily[i].getDate(),
+                            R.drawable.cloudy,
+                            forecast.daily[i].temp.max.toInt().toShort()
+                    )
+                }
+    }
+}
 class MainActivity : AppCompatActivity() {
-    var wetherChannel: WetherChannel = UseHandler()
 
     private lateinit var TodayCheck: Array<CheckBox>
     private lateinit var TomorrowCheck: Array<CheckBox>
@@ -103,15 +138,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-//        when("View mode"){
-//            "View model" -> {
-//                //ViewModel Exp
-//
-//            }
-//            else -> TODO()
-//        }
-//        wetherChannel.fillTempAndHumidity()
-        threadTodayFill()
 
 
         TodayCheck = arrayOf(
@@ -136,17 +162,19 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.rig_text5),
         )
 
-        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {//RecyclerView exist only in  Landscape
-            val recyClouds: RecyclerView = findViewById(R.id.recyCloud)
-            recyClouds.layoutManager = LinearLayoutManager(this)
-            threadForecastFill(3)
-        } else {                                     //Custom View exist only in Portrait
+        if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            //Custom View exist only in Portrait
             myslider = findViewById(R.id.mySlider)
             polivEngine.savedPolivPower?.let {
                 myslider!!.setCurrentValue(polivEngine.savedPolivPower!!)
             } ?: let {
                 myslider!!.initAttrs()
             }
+        }
+        var multyThreadingMethod = MultyThreadingMethod.VIEWMODEL_RX_LIVEDATA
+        retroInit(multyThreadingMethod)
+        findViewById<Button>(R.id.updateBut).setOnClickListener{
+            retroInit(multyThreadingMethod)
         }
 
         val not: TextView = findViewById(R.id.notific)//Orange notification circle
@@ -228,8 +256,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    inner class UseHandler : WetherChannel {
-        override fun fillTempAndHumidity() {
+    inner class UseHandler{
+        fun fillTempAndHumidity() {
             var humaLine: String
             var tempLine: String
             Thread(Runnable {
@@ -250,164 +278,6 @@ class MainActivity : AppCompatActivity() {
             }).start()
         }
     }
-    inner class UseAsyncTask : WetherChannel {
-        override fun fillTempAndHumidity() {
-            var myAsTask = MyAsTask()
-            myAsTask.execute()
-        }
-
-
-        inner class MyAsTask : AsyncTask<Unit, Unit, Unit>() {
-            lateinit var humaLine: String
-            lateinit var tempLine: String
-            override fun doInBackground(vararg params: Unit?) {
-                val forecast: Response<CurrentWeatherForecast>? =
-                    RetrofitClient.getCurrentWeather().execute()
-                forecast?.let {
-                    tempLine = forecast.body()!!.weather.temp.toString()
-                    humaLine = forecast.body()!!.weather.humidity.toString()
-
-                } ?: let {
-                    Log.e("Forecast_Async", "null")
-                }
-            }
-
-            override fun onPreExecute() {
-                Log.e("Async", "OnPre")
-                super.onPreExecute()
-            }
-
-            override fun onPostExecute(result: Unit?) {
-                super.onPostExecute(result)
-                (tempLine + "\u00B0").also { findViewById<TextView>(R.id.Temp_val).text = it }
-                (humaLine + "%").also { findViewById<TextView>(R.id.Huidity_val).text = it }
-                Log.e("Async", "OnPost")
-            }
-
-        }
-    }
-    /*
-    inner class UseLoader : WetherChannel {
-        override fun fillTempAndHumidity() {
-            // TODO: 2/17/21
-        }
-
-        override fun getTemp(plus: Int): Short {
-            return (23 + plus).toShort()
-        }
-
-        override fun getWetherImg(plus: Int): Int {
-            return R.drawable.rain
-        }
-
-        override fun getDateLine(plus: Int): String {
-            return super.getDateLine(plus)
-        }
-
-        inner class TimeLoader(context: Context?, args: Bundle?) : Loader<String?>(context) {
-            val LOG_TAG = "Loader"
-            var myAsTask: MyAsTask? = null
-            protected override fun onStartLoading() {
-                super.onStartLoading()
-                Log.d(LOG_TAG, hashCode().toString() + " onStartLoading")
-            }
-
-            protected override fun onStopLoading() {
-                super.onStopLoading()
-                Log.d(LOG_TAG, hashCode().toString() + " onStopLoading")
-            }
-
-            protected override fun onForceLoad() {
-                super.onForceLoad()
-                Log.d(LOG_TAG, hashCode().toString() + " onForceLoad")
-                if (myAsTask != null) myAsTask!!.cancel(true)
-                myAsTask = MyAsTask()
-                myAsTask!!.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR)
-            }
-
-            protected override fun onAbandon() {
-                super.onAbandon()
-                Log.d(LOG_TAG, hashCode().toString() + " onAbandon")
-            }
-
-            protected override fun onReset() {
-                super.onReset()
-                Log.d(LOG_TAG, hashCode().toString() + " onReset")
-            }
-
-            fun getResultFromTask(result: String?) {
-                deliverResult(result)
-            }
-
-            inner class MyAsTask : AsyncTask<Unit, Unit, Pair<String, String>>() {
-                override fun doInBackground(vararg params: Unit?): Pair<String, String>? {
-                    val forecast: Response<CurrentWeatherForecast>? =
-                            RetrofitClient.getCurrentWeather().execute()
-                    forecast?.let {
-                        return Pair(forecast.body()!!.weather.temp.toString(),
-                            forecast.body()!!.weather.humidity.toString())
-                    }
-                    Log.e("Forecast_Async", "null")
-                    return null
-                }
-
-                override fun onPreExecute() {
-                    Log.e("Async", "OnPre")
-                    super.onPreExecute()
-                }
-
-                override fun onPostExecute(result: Pair<String, String>?) {
-                    super.onPostExecute(result)
-                    findViewById<TextView>(R.id.Temp_val).text = result?.first
-                    findViewById<TextView>(R.id.Huidity_val).text = result?.second
-                    Log.e("Async", "OnPost")
-                }
-
-            }
-        }
-    }
-    */
-    /*
-    inner class UseMVaLD : WetherChannel {
-        inner class MyVM : ViewModel() {
-
-        }
-        override fun fillTempAndHumidity() {
-
-//            var viewMod = ViewModelProvider.of(this).get(MyVM::class.java)
-
-            var humaLine: String
-            var tempLine: String
-            Thread(Runnable {
-                val msg: Message = handler.obtainMessage()
-                val bundle = Bundle()
-                val forecast: Response<CurrentWeatherForecast>? = RetrofitClient.getCurrentWeather().execute()
-                forecast?.let {
-                    tempLine = forecast.body()!!.weather.temp.toString()
-                    humaLine = forecast.body()!!.weather.humidity.toString()
-
-                    bundle.putString("Temp",tempLine)
-                    bundle.putString("Hum",humaLine)
-                    msg.data = bundle
-                    handler.sendMessage(msg)
-                } ?: let {
-                    Log.e("Forecast_Thrd", "null")
-                }
-            }).start()
-        }
-        override fun getTemp(plus: Int): Short {
-            return (23 + plus).toShort()
-        }
-
-        override fun getWetherImg(plus: Int): Int {
-            return R.drawable.rain
-        }
-
-        override fun getDateLine(plus: Int): String {
-            return super.getDateLine(plus)
-        }
-    }
-*/
 
     class MyAdapter(var values: List<Triple<String, Int, Short>>) :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
 
@@ -455,74 +325,116 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun threadTodayFill(){
-        val callBack  = object : ThreadCallBack{
-            override fun fillData(retroDate: RetroDate) {
-                (retroDate as? CurrentWeatherForecast)?.let{
-                    WETHER.setCurrent(retroDate)
-                    runOnUiThread(::updateWether)
-                }
-            }
-        }
-        val threadToday : MyCurrentThread = MyCurrentThread(callBack)
-        Thread(threadToday).start()
-    }
-    fun threadForecastFill(count : Int){
-        val callBack  = object : ThreadCallBack{
-            override fun fillData(retroDate: RetroDate) {
-                (retroDate as? WeatherForecast)?.let{
-                    WETHER.setForecast(retroDate, count)
-                    runOnUiThread(::updateForecast)
-                }
-            }
-        }
-        val threadToday = MyWeeklyThread(callBack)
-        Thread(threadToday).start()
-    }
-    object WETHER{
-        lateinit var Humidity: String
-        lateinit var Temperature: String
-        lateinit var forecastList : List<Triple<String, Int, Short>>
-
-        fun setCurrent(forecast: CurrentWeatherForecast){
-            Temperature = forecast.weather.temp.toString()
-            Humidity = forecast.weather.humidity.toString()
-        }
-        fun setForecast(forecast: WeatherForecast, count : Int) {
-            forecastList = (0 until count)//it == 0 is today, it == 1 is yesterday etc...
-                    .map { i ->
-                        Triple(forecast.daily[i].getDate(),
-                                R.drawable.cloudy,
-                                forecast.daily[i].temp.max.toInt().toShort()
-                        )
-                    }
-        }
-    }
     private fun updateWether() {
         findViewById<TextView>(R.id.Huidity_val).text = WETHER.Humidity
         findViewById<TextView>(R.id.Temp_val).text = WETHER.Temperature
     }
-    private fun updateForecast(){
-        findViewById<RecyclerView>(R.id.recyCloud).adapter = MyAdapter(WETHER.forecastList)
+    private fun updateForecast() =
+            recucleViewInit()?.let{it.adapter = MyAdapter(WETHER.forecastList)}
+
+    fun recucleViewInit() : RecyclerView?{
+        val recyCler: RecyclerView
+        try {
+            recyCler = findViewById(R.id.recyCloud)//RecyclerView exist only in  Landscape
+            recyCler.layoutManager = LinearLayoutManager(this)
+        }catch (ex: IllegalArgumentException){
+            Log.e("Recycler-layoutManager", ex.message!!)
+            return null
+        }catch (ex: java.lang.Exception){
+            Log.e("Recycler", ex.message!!)
+            return null
+        }
+        return recyCler
+    }
+    fun retroInit(mode: MultyThreadingMethod) {
+        val callBacks: Pair<SetRetroDataToUI, GetDataFromRetro> = Pair(
+                //Two callbacks: 1.What to do to data? 2.Where get the data?
+            object : SetRetroDataToUI{
+                override fun fillData(retroDate: RetroDate) {
+                    (retroDate as? CurrentWeatherForecast)?.let{
+                        WETHER.setCurrent(retroDate)
+                        runOnUiThread(::updateWether)
+                    }?:(retroDate as? WeatherForecast)?.let {
+                        WETHER.setForecast(retroDate, WETHER.FORCAST_LENGTH)
+                        runOnUiThread(::updateForecast)
+                    }
+                }
+            },
+            object : GetDataFromRetro{
+
+            override fun getCurrent(): Call<CurrentWeatherForecast> =
+                    RetrofitClient.getCurrentWeather()
+
+
+            override fun getForcast(): Call<WeatherForecast> =
+                    RetrofitClient.getWeatherForecast()
+
+            }
+        )
+
+        when (mode) {
+            MultyThreadingMethod.THREADS -> {
+                Log.e("MultiThreadingTest", "Threds")
+                Thread(WeatherForcastThread(callBacks, WETHER.Mode.CURRENT)).start()
+                Thread(WeatherForcastThread(callBacks, WETHER.Mode.FORWEEK)).start()
+            }
+            MultyThreadingMethod.ASSYNK -> {
+                Log.e("MultiThreadingTest", "Async")
+                WeatherForcastAsync(callBacks, WETHER.Mode.CURRENT).execute()
+                WeatherForcastAsync(callBacks, WETHER.Mode.FORWEEK).execute()
+            }
+            MultyThreadingMethod.VIEWMODEL_RX_LIVEDATA -> {
+                Log.e("MultiThreadingTest", "RX")
+                fun execRx(single: Single<RetroDate>) {
+                    single
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe({//onSuccess
+                                callBacks.first.fillData(it)
+                            }, {//onError
+                                Log.e("SUBSCRIBE", "Error")
+                            })
+                }
+                val single_Current: Single<RetroDate> = Single.create { subscriber ->
+                    val body = callBacks.second.getCurrent().execute().body()
+                    body?.let {
+                        subscriber.onSuccess(body)
+                    }
+                }
+                execRx(single_Current)
+
+                val single_Forecast: Single<RetroDate> = Single.create { subscriber ->
+                    val body = callBacks.second.getForcast().execute().body()
+                    body?.let {
+                        subscriber.onSuccess(body)
+                    }
+                }
+                execRx(single_Forecast)
+
+            }
+            else -> {
+                defaultWetherInit()
+            }
+        }
     }
 
-//    private fun buildForacstData(count: Int = 1): List<Triple<String, Int, Short>> {
-//        var forecast: List<DailyForecast>? = null
-//        val forecast_connection: Response<WeatherForecast>? = RetrofitClient.getWeatherForecast().execute()
-//        forecast_connection?.let {
-//            forecast = forecast_connection.body()!!.daily
-//        } ?: let {
-//            Log.e("Forecast_Thrd", "null")
-//        }
-//
-//    }
+    private fun defaultWetherInit() {
+        TODO("Not yet implemented")
+    }
+    enum class MultyThreadingMethod{
+        THREADS,
+        ASSYNK,
+        HANDLER,
+        LOADER,
+        THREAD_POOL_EXECUTOR,
+        VIEWMODEL_RX_LIVEDATA,
+        COROUTINES
+    }
 }
 
 
 
 /*
-    *Setting retuns type in Async
-    *and destruct memory lek with static class or Activity.callBack
     *Test Async in Profiler
  */
 

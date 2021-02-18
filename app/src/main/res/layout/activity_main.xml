@@ -9,9 +9,11 @@
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyCloud"
-        android:layout_width="390dp"
-        android:layout_height="match_parent"
-        tools:listitem="@layout/mem1">
+        android:layout_width="380dp"
+        android:layout_height="480dp"
+        tools:listitem="@layout/mem1"
+        android:layout_marginLeft="32dp"
+        android:layout_marginTop="32dp">
 
     </androidx.recyclerview.widget.RecyclerView>
 
@@ -92,6 +94,16 @@
             android:paddingTop="18sp"
             android:textSize="30sp"
             app:drawableTintMode="add" />
+        <Button
+            android:id="@+id/updateBut"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/update"
+            app:drawableTintMode="add"
+            android:layout_row="3"
+            android:layout_column="0"
+            android:layout_gravity="top|left"/>
+
     </GridLayout>
 
     <LinearLayout
