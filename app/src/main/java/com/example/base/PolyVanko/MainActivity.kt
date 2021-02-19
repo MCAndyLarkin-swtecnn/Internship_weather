@@ -29,6 +29,8 @@ import retrofit2.Call
 import retrofit2.Response
 import kotlin.collections.ArrayList
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.*
+import java.lang.Runnable
 
 
 //Next will added MT
@@ -194,6 +196,7 @@ object WETHER{
     }
 }
 class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDate?>  {
+    val scope = CoroutineScope(Job())
 //    lateinit var myMV: MyVM
     val LOG_TAG = "Loader"
     val LOADER_ID = 1
@@ -255,7 +258,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
             }
         }
 
-        var multyThreadingMethod = MultyThreadingMethod.LOADER
+        var multyThreadingMethod = MultyThreadingMethod.COROUTINES
         retroInit(multyThreadingMethod)
         updateBut.setOnClickListener{
             retroInit(multyThreadingMethod)
@@ -516,6 +519,19 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
                 WETHER.callPair = callBacks
                 loaderManager.initLoader(LOADER_ID, Bundle(), this).forceLoad()
             }
+            MultyThreadingMethod.COROUTINES -> {//With Livedata & ModelView & little RX
+                Log.e("MultiThreadingTest", "Coroutines")
+                scope.launch {
+                    val current = scope.async {
+                        callBacks.second.getCurrent().execute().body()
+                    }.await()
+                    val forecast = scope.async {
+                        callBacks.second.getForcast().execute().body()
+                    }.await()
+                    current?.let { callBacks.first.fillData(current)}
+                    forecast?.let { callBacks.first.fillData(forecast)}
+                }
+            }
             else -> {
                 defaultWetherInit()
             }
@@ -552,6 +568,10 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
     }
 
     override fun onLoaderReset(loader: Loader<RetroDate?>) {}
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
 }
 
 
