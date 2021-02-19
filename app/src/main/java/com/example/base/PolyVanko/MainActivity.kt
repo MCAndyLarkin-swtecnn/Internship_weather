@@ -31,6 +31,10 @@ import kotlin.collections.ArrayList
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import java.lang.Runnable
+import java.util.concurrent.Callable
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 
 //Next will added MT
@@ -115,7 +119,7 @@ class MyVM() : ViewModel(){
 }
 
 //About Loader
-class TimeLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(context) {
+class WetherLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(context) {
     val LOG_TAG = "Loader"
     var weatherAsync: WeatherAsync? = null
 
@@ -156,6 +160,30 @@ class TimeLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(context)
     init {
         //Read and set bundle data  (make default)
     }
+}
+
+//About ThreadPoolExecutor
+class WetherCollable(var mode: WETHER.Mode) : Callable<Unit>{
+    override fun call(): Unit {
+        var retro: RetroDate? = null
+        try {
+            val callBack = WETHER.callPair.second
+            retro = when(mode){
+                WETHER.Mode.CURRENT ->{
+                    callBack.getCurrent().execute().body()
+                }
+                WETHER.Mode.FORWEEK ->{
+                    callBack.getForcast().execute().body()
+                }
+            }
+        }catch (ex: Exception){
+            Log.e("TPE.Exception", ex.message!!)
+        }
+        retro?.let{
+            WETHER.callPair.first.fillData(retro)
+        }
+    }
+
 }
 
 object polivEngine{
@@ -221,6 +249,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
 //            override fun onSaveInstanceState()
 //            and
 //            override fun onRestoreInstantState()
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -258,7 +287,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
             }
         }
 
-        var multyThreadingMethod = MultyThreadingMethod.COROUTINES
+        var multyThreadingMethod = MultyThreadingMethod.THREAD_POOL_EXECUTOR
         retroInit(multyThreadingMethod)
         updateBut.setOnClickListener{
             retroInit(multyThreadingMethod)
@@ -457,6 +486,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
 
             }
         )
+        WETHER.callPair = callBacks
 
         fun execRx(single: Single<RetroDate?>) {
             single
@@ -516,8 +546,19 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
             }
             MultyThreadingMethod.LOADER -> {//With Livedata & ModelView & little RX
                 Log.e("MultiThreadingTest", "Loader")
-                WETHER.callPair = callBacks
                 loaderManager.initLoader(LOADER_ID, Bundle(), this).forceLoad()
+            }
+            MultyThreadingMethod.THREAD_POOL_EXECUTOR -> {//With Livedata & ModelView & little RX
+                Log.e("MultiThreadingTest", "ThreadPoolExecutor")
+                val ThrPlExr = ThreadPoolExecutor(
+                    2, 2, 1, TimeUnit.MILLISECONDS,
+                    LinkedBlockingQueue()
+                )
+                val currentMC = WetherCollable(WETHER.Mode.CURRENT)
+                ThrPlExr.submit(currentMC)
+                val forecastMC = WetherCollable(WETHER.Mode.FORWEEK)
+                ThrPlExr.submit(forecastMC)
+                ThrPlExr.shutdown()
             }
             MultyThreadingMethod.COROUTINES -> {//With Livedata & ModelView & little RX
                 Log.e("MultiThreadingTest", "Coroutines")
@@ -531,6 +572,9 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
                     current?.let { callBacks.first.fillData(current)}
                     forecast?.let { callBacks.first.fillData(forecast)}
                 }
+            }
+            MultyThreadingMethod.HANDLER -> {//With Livedata & ModelView & little RX
+                Log.e("MultiThreadingTest", "Handler")
             }
             else -> {
                 defaultWetherInit()
@@ -554,7 +598,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
     override fun onCreateLoader(id: Int, args: Bundle?): Loader<RetroDate?>? {
         var loader: Loader<RetroDate?>? = null
         if (id == LOADER_ID) {
-            loader = TimeLoader(this, args)//Custom constructor
+            loader = WetherLoader(this, args)//Custom constructor
             Log.e(LOG_TAG, "onCreateLoader: " )
         }
         return loader
