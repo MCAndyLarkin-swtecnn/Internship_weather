@@ -2,7 +2,6 @@ package com.example.base.PolyVanko
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.*
 import android.util.Log
 import android.view.LayoutInflater
@@ -11,6 +10,10 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RetrofitClient
@@ -44,7 +47,7 @@ class WeatherForcastThread(var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro
                 WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
             }
         }catch (ex: Exception){
-            Log.e("Exception", ex.message!!)
+            Log.e("Exception.Thread", ex.message!!)
         }
         current?.let{this.callBacks.first.fillData(it)}
     }
@@ -59,11 +62,11 @@ class WeatherForcastAsync(
         var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro>,
         var mode: WETHER.Mode)
     : AsyncTask<Unit, Unit, RetroDate>(){
-    override fun doInBackground(vararg params: Unit?): RetroDate? {
-        return  when(mode){
+    override fun doInBackground(vararg params: Unit?): RetroDate? =
+        when(mode){
             WETHER.Mode.CURRENT -> callBacks.second.getCurrent().execute().body()
             WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
-        }
+
     }
     override fun onPostExecute(result: RetroDate?) {
         result?.let{callBacks.first.fillData(it)}
@@ -72,10 +75,40 @@ class WeatherForcastAsync(
 }
 
 //About VM
-data class MyWether(
-    var temp: String = "",
-    val hum: String = ""
-)
+class MyVM() : ViewModel(){
+    private var forcast: MutableLiveData<Single<RetroDate?>> = MutableLiveData()
+    private var current: MutableLiveData<Single<RetroDate?>> = MutableLiveData()
+
+    fun updateForecast() {
+        try {
+            val single_Forecast: Single<RetroDate?> = Single.create {
+                it.onSuccess(
+                    RetrofitClient.getWeatherForecast().execute().body()
+                )
+            }
+            forcast.value = single_Forecast
+        }catch (ex: Exception){
+            Log.e("Exception.MV", ex.message!!)
+        }
+    }
+    fun updateCurrent() {
+        try {
+            val single_Current: Single<RetroDate?> = Single.create {
+                it.onSuccess(
+                    RetrofitClient.getCurrentWeather().execute().body()
+                )
+            }
+            current.value = single_Current
+        }catch (ex: Exception){
+            Log.e("Exception.MV", ex.message!!)
+        }
+    }
+    fun getForecast() = forcast
+    fun getCurrent() = current
+
+}
+
+//About Loader
 
 object polivEngine{
     const val ZONES = 5
@@ -114,7 +147,8 @@ object WETHER{
     }
 }
 class MainActivity : AppCompatActivity() {
-
+//    lateinit var myMV: MyVM
+    private val myMV by lazy { ViewModelProviders.of(this).get(MyVM::class.java)}
     private lateinit var TodayCheck: Array<CheckBox>
     private lateinit var TomorrowCheck: Array<CheckBox>
     private lateinit var RigText: Array<TextView>
@@ -171,7 +205,8 @@ class MainActivity : AppCompatActivity() {
                 myslider!!.initAttrs()
             }
         }
-        var multyThreadingMethod = MultyThreadingMethod.VIEWMODEL_RX_LIVEDATA
+
+        var multyThreadingMethod = MultyThreadingMethod.VIEWMODEL_LIVEDATA_RX
         retroInit(multyThreadingMethod)
         findViewById<Button>(R.id.updateBut).setOnClickListener{
             retroInit(multyThreadingMethod)
@@ -348,29 +383,42 @@ class MainActivity : AppCompatActivity() {
     }
     fun retroInit(mode: MultyThreadingMethod) {
         val callBacks: Pair<SetRetroDataToUI, GetDataFromRetro> = Pair(
-                //Two callbacks: 1.What to do to data? 2.Where get the data?
-            object : SetRetroDataToUI{
+            //Two callbacks: 1.What to do to data? 2.Where get the data?
+            object : SetRetroDataToUI {
                 override fun fillData(retroDate: RetroDate) {
-                    (retroDate as? CurrentWeatherForecast)?.let{
+                    (retroDate as? CurrentWeatherForecast)?.let {
                         WETHER.setCurrent(retroDate)
                         runOnUiThread(::updateWether)
-                    }?:(retroDate as? WeatherForecast)?.let {
+                    } ?: (retroDate as? WeatherForecast)?.let {
                         WETHER.setForecast(retroDate, WETHER.FORCAST_LENGTH)
                         runOnUiThread(::updateForecast)
                     }
                 }
             },
-            object : GetDataFromRetro{
+            object : GetDataFromRetro {
 
-            override fun getCurrent(): Call<CurrentWeatherForecast> =
+                override fun getCurrent(): Call<CurrentWeatherForecast> =
                     RetrofitClient.getCurrentWeather()
 
 
-            override fun getForcast(): Call<WeatherForecast> =
+                override fun getForcast(): Call<WeatherForecast> =
                     RetrofitClient.getWeatherForecast()
 
             }
         )
+
+        fun execRx(single: Single<RetroDate?>) {
+            single
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({//onSuccess
+                    it?.let {
+                        callBacks.first.fillData(it)
+                    }
+                }, {//onError
+                    Log.e("SUBSCRIBE", "Error")
+                })
+        }
 
         when (mode) {
             MultyThreadingMethod.THREADS -> {
@@ -383,19 +431,11 @@ class MainActivity : AppCompatActivity() {
                 WeatherForcastAsync(callBacks, WETHER.Mode.CURRENT).execute()
                 WeatherForcastAsync(callBacks, WETHER.Mode.FORWEEK).execute()
             }
-            MultyThreadingMethod.VIEWMODEL_RX_LIVEDATA -> {
+            MultyThreadingMethod.RX -> {//Without Livedata & ModelView (I don't understand
+                // why I need their (in current case))
                 Log.e("MultiThreadingTest", "RX")
-                fun execRx(single: Single<RetroDate>) {
-                    single
-                            .subscribeOn(Schedulers.io())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .subscribe({//onSuccess
-                                callBacks.first.fillData(it)
-                            }, {//onError
-                                Log.e("SUBSCRIBE", "Error")
-                            })
-                }
-                val single_Current: Single<RetroDate> = Single.create { subscriber ->
+
+                val single_Current: Single<RetroDate?> = Single.create { subscriber ->
                     val body = callBacks.second.getCurrent().execute().body()
                     body?.let {
                         subscriber.onSuccess(body)
@@ -403,13 +443,28 @@ class MainActivity : AppCompatActivity() {
                 }
                 execRx(single_Current)
 
-                val single_Forecast: Single<RetroDate> = Single.create { subscriber ->
+                val single_Forecast: Single<RetroDate?> = Single.create { subscriber ->
                     val body = callBacks.second.getForcast().execute().body()
                     body?.let {
                         subscriber.onSuccess(body)
                     }
                 }
                 execRx(single_Forecast)
+
+            }
+            MultyThreadingMethod.VIEWMODEL_LIVEDATA_RX -> {//With Livedata & ModelView & little RX
+                Log.e("MultiThreadingTest", "VM & LD")
+                myMV.getForecast().observe(this, Observer {
+                    execRx(it)
+                })
+                myMV.getCurrent().observe(this, Observer {
+                    execRx(it)
+                })
+                myMV.updateCurrent()
+                myMV.updateForecast()
+            }
+            MultyThreadingMethod.LOADER -> {//With Livedata & ModelView & little RX
+                Log.e("MultiThreadingTest", "VM & LD")
 
             }
             else -> {
@@ -427,7 +482,8 @@ class MainActivity : AppCompatActivity() {
         HANDLER,
         LOADER,
         THREAD_POOL_EXECUTOR,
-        VIEWMODEL_RX_LIVEDATA,
+        RX,
+        VIEWMODEL_LIVEDATA_RX,
         COROUTINES
     }
 }
