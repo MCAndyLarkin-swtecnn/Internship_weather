@@ -1,6 +1,9 @@
 package com.example.base.PolyVanko
 
 import android.annotation.SuppressLint
+import android.app.LoaderManager
+import android.content.Context
+import android.content.Loader
 import android.content.res.Configuration
 import android.os.*
 import android.util.Log
@@ -25,6 +28,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers
 import retrofit2.Call
 import retrofit2.Response
 import kotlin.collections.ArrayList
+import kotlinx.android.synthetic.main.activity_main.*
 
 
 //Next will added MT
@@ -109,6 +113,48 @@ class MyVM() : ViewModel(){
 }
 
 //About Loader
+class TimeLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(context) {
+    val LOG_TAG = "Loader"
+    var weatherAsync: WeatherAsync? = null
+
+    override fun onForceLoad() {//Loader job
+        super.onForceLoad()
+        Log.e(LOG_TAG, hashCode().toString() + " onForceLoad")
+        if (weatherAsync != null) weatherAsync!!.cancel(true)
+        WeatherAsync(WETHER.callPair,WETHER.Mode.FORWEEK)
+            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) as WeatherAsync
+        WeatherAsync(WETHER.callPair,WETHER.Mode.CURRENT)
+            .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) as WeatherAsync
+    }
+
+    fun getResultFromTask(result: RetroDate?) {
+        deliverResult(result)
+    }
+
+    inner class WeatherAsync(
+        var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro>,
+        var mode: WETHER.Mode)
+        : AsyncTask<Unit, Unit?, RetroDate?>() {
+        override fun doInBackground(vararg params: Unit?): RetroDate? =
+            when(mode){
+                WETHER.Mode.CURRENT -> callBacks.second.getCurrent().execute().body()
+                WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
+
+            }
+        override fun onPostExecute(result: RetroDate?) {
+            result?.let{callBacks.first.fillData(it)}
+            super.onPostExecute(result)
+            getResultFromTask(result)
+        }
+    }
+
+    companion object {//May contain constants
+    }
+
+    init {
+        //Read and set bundle data  (make default)
+    }
+}
 
 object polivEngine{
     const val ZONES = 5
@@ -131,6 +177,7 @@ object WETHER{
     lateinit var Temperature: String
     lateinit var forecastList : List<Triple<String, Int, Short>>
     val FORCAST_LENGTH = 3
+    lateinit var callPair : Pair<SetRetroDataToUI, GetDataFromRetro>
 
     fun setCurrent(forecast: CurrentWeatherForecast){
         Temperature = forecast.weather.temp.toString()
@@ -146,8 +193,10 @@ object WETHER{
                 }
     }
 }
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDate?>  {
 //    lateinit var myMV: MyVM
+    val LOG_TAG = "Loader"
+    val LOADER_ID = 1
     private val myMV by lazy { ViewModelProviders.of(this).get(MyVM::class.java)}
     private lateinit var TodayCheck: Array<CheckBox>
     private lateinit var TomorrowCheck: Array<CheckBox>
@@ -175,25 +224,25 @@ class MainActivity : AppCompatActivity() {
 
 
         TodayCheck = arrayOf(
-            findViewById(R.id.rightCheck1),
-            findViewById(R.id.rightCheck2),
-            findViewById(R.id.rightCheck3),
-            findViewById(R.id.rightCheck4),
-            findViewById(R.id.rightCheck5)
+            rightCheck1,
+            rightCheck2,
+            rightCheck3,
+            rightCheck4,
+            rightCheck5
         )
         TomorrowCheck = arrayOf(
-            findViewById(R.id.leftCheck1),
-            findViewById(R.id.leftCheck2),
-            findViewById(R.id.leftCheck3),
-            findViewById(R.id.leftCheck4),
-            findViewById(R.id.leftCheck5)
+            leftCheck1,
+            leftCheck2,
+            leftCheck3,
+            leftCheck3,
+            leftCheck5
         )
         RigText = arrayOf(
-            findViewById(R.id.rig_text1),
-            findViewById(R.id.rig_text2),
-            findViewById(R.id.rig_text3),
-            findViewById(R.id.rig_text4),
-            findViewById(R.id.rig_text5),
+            rig_text1,
+            rig_text2,
+            rig_text3,
+            rig_text4,
+            rig_text5
         )
 
         if (resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
@@ -206,45 +255,44 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        var multyThreadingMethod = MultyThreadingMethod.VIEWMODEL_LIVEDATA_RX
+        var multyThreadingMethod = MultyThreadingMethod.LOADER
         retroInit(multyThreadingMethod)
-        findViewById<Button>(R.id.updateBut).setOnClickListener{
+        updateBut.setOnClickListener{
             retroInit(multyThreadingMethod)
         }
 
-        val not: TextView = findViewById(R.id.notific)//Orange notification circle
-        not.text = polivEngine.count_of_notif.toString()
-        if (not.text.toString().toInt() == 0) not.background = getDrawable(R.drawable.nut)
-        not.setOnClickListener {
-            val count = not.text.toString().toInt()
+        //Orange notification circle
+        notific.text = polivEngine.count_of_notif.toString()
+        if (notific.text.toString().toInt() == 0) notific.background = getDrawable(R.drawable.nut)
+        notific.setOnClickListener {
+            val count = notific.text.toString().toInt()
             if (count > 0) {
                 Toast.makeText(this, "Завтра все еще Зима", Toast.LENGTH_LONG).show()
-                not.text = (count - 1).toString()
+                notific.text = (count - 1).toString()
                 polivEngine.count_of_notif = count - 1
-                if (count == 1) not.background = getDrawable(R.drawable.nut)
+                if (count == 1) notific.background = getDrawable(R.drawable.nut)
             } else
                 Toast.makeText(this, "Уведомлений больше нет", Toast.LENGTH_LONG).show()
         }
 
-
-        val shlang: CheckBox = findViewById(R.id.Shlang)//Checkbox polivaika
+        //Checkbox polivaika
         if (polivEngine.brizg) {
-            shlang.isChecked = true
-            shlang.contentDescription = "Shlungs vodoi brizguet"
+            Shlang.isChecked = true
+            Shlang.contentDescription = "Shlungs vodoi brizguet"
         } else {
-            shlang.isChecked = false
-            shlang.contentDescription = "Shlungs vodoi ne brizguet"
+            Shlang.isChecked = false
+            Shlang.contentDescription = "Shlungs vodoi ne brizguet"
             myslider?.Vikl()
         }
-        shlang.setOnClickListener {
-            if (shlang.isChecked) {
+        Shlang.setOnClickListener {
+            if (Shlang.isChecked) {
                 polivEngine.brizg = true
                 onPrediction()
                 myslider?.Vkl()
                 for (chB in TomorrowCheck) {
                     chB.isClickable = true
                 }
-                shlang.contentDescription = "Shlungs vodoi brizguet"
+                Shlang.contentDescription = "Shlungs vodoi brizguet"
             } else {
                 polivEngine.brizg = false
                 myslider?.Vikl()
@@ -252,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                     chB.isChecked = false
                     chB.isClickable = false
                 }
-                shlang.contentDescription = "Shlungs vodoi ne brizguet"
+                Shlang.contentDescription = "Shlungs vodoi ne brizguet"
             }
         }
 
@@ -464,8 +512,9 @@ class MainActivity : AppCompatActivity() {
                 myMV.updateForecast()
             }
             MultyThreadingMethod.LOADER -> {//With Livedata & ModelView & little RX
-                Log.e("MultiThreadingTest", "VM & LD")
-
+                Log.e("MultiThreadingTest", "Loader")
+                WETHER.callPair = callBacks
+                loaderManager.initLoader(LOADER_ID, Bundle(), this).forceLoad()
             }
             else -> {
                 defaultWetherInit()
@@ -486,6 +535,23 @@ class MainActivity : AppCompatActivity() {
         VIEWMODEL_LIVEDATA_RX,
         COROUTINES
     }
+    override fun onCreateLoader(id: Int, args: Bundle?): Loader<RetroDate?>? {
+        var loader: Loader<RetroDate?>? = null
+        if (id == LOADER_ID) {
+            loader = TimeLoader(this, args)//Custom constructor
+            Log.e(LOG_TAG, "onCreateLoader: " )
+        }
+        return loader
+    }
+
+    override fun onLoadFinished(loader: Loader<RetroDate?>?, data: RetroDate?) {
+        //UI Work
+        data?.let {
+            WETHER.callPair.first.fillData(data)
+        }
+    }
+
+    override fun onLoaderReset(loader: Loader<RetroDate?>) {}
 }
 
 
