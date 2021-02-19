@@ -64,8 +64,34 @@ class WeatherForcastThread(var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro
 
 }
 
-//About Hendler
+//About Handler
+var handler: Handler = @SuppressLint("HandlerLeak")
+object : Handler() {
+    override fun handleMessage(msg: Message) {
+        val retro = msg.obj as RetroDate?
+        retro?.let {
+            WETHER.callPair.first.fillData(retro)
+        }
+    }
+}
+class WeatherForcastHandler(var mode: WETHER.Mode) : Runnable{
+    val msg: Message = handler.obtainMessage()
+    var weather: RetroDate? = null
 
+    override fun run() {
+        try{
+            weather = when(mode){
+                WETHER.Mode.CURRENT -> WETHER.callPair.second.getCurrent().execute().body()
+                WETHER.Mode.FORWEEK -> WETHER.callPair.second.getForcast().execute().body()
+            }
+        }catch (ex: Exception){
+            Log.e("Exception.Thread", ex.message!!)
+        }
+        msg.obj = weather
+        handler.sendMessage(msg)
+    }
+
+}
 
 //About Async
 class WeatherForcastAsync(
@@ -287,7 +313,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
             }
         }
 
-        var multyThreadingMethod = MultyThreadingMethod.THREAD_POOL_EXECUTOR
+        var multyThreadingMethod = MultyThreadingMethod.RX
         retroInit(multyThreadingMethod)
         updateBut.setOnClickListener{
             retroInit(multyThreadingMethod)
@@ -371,29 +397,6 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
         }
     }
 
-    inner class UseHandler{
-        fun fillTempAndHumidity() {
-            var humaLine: String
-            var tempLine: String
-            Thread(Runnable {
-                val msg: Message = handler.obtainMessage()
-                val bundle = Bundle()
-                val forecast: Response<CurrentWeatherForecast>? = RetrofitClient.getCurrentWeather().execute()
-                forecast?.let {
-                    tempLine = forecast.body()!!.weather.temp.toString()
-                    humaLine = forecast.body()!!.weather.humidity.toString()
-
-                    bundle.putString("Temp",tempLine)
-                    bundle.putString("Hum",humaLine)
-                    msg.data = bundle
-                    handler.sendMessage(msg)
-                } ?: let {
-                    Log.e("Forecast_Thrd", "null")
-                }
-            }).start()
-        }
-    }
-
     class MyAdapter(var values: List<Triple<String, Int, Short>>) :  RecyclerView.Adapter<MyAdapter.ViewHolder>() {
 
         class ViewHolder(itemView: View?) : RecyclerView.ViewHolder(
@@ -431,14 +434,6 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
 
     }
 
-    var handler: Handler = @SuppressLint("HandlerLeak")
-    object : Handler() {
-        override fun handleMessage(msg: Message) {
-            val bundle = msg.data
-            (bundle.getString("Temp")+"\u00B0").also { findViewById<TextView>(R.id.Temp_val).text = it }
-            (bundle.getString("Hum") + "%").also { findViewById<TextView>(R.id.Huidity_val).text = it }
-        }
-    }
 
     private fun updateWether() {
         findViewById<TextView>(R.id.Huidity_val).text = WETHER.Humidity
@@ -575,16 +570,12 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
             }
             MultyThreadingMethod.HANDLER -> {//With Livedata & ModelView & little RX
                 Log.e("MultiThreadingTest", "Handler")
-            }
-            else -> {
-                defaultWetherInit()
+                Thread(WeatherForcastHandler(WETHER.Mode.FORWEEK)).start()
+                Thread(WeatherForcastHandler(WETHER.Mode.CURRENT)).start()
             }
         }
     }
 
-    private fun defaultWetherInit() {
-        TODO("Not yet implemented")
-    }
     enum class MultyThreadingMethod{
         THREADS,
         ASSYNK,
