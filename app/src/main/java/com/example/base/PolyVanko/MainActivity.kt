@@ -13,10 +13,12 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProviders
+import androidx.loader.content.AsyncTaskLoader
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RetrofitClient
@@ -26,11 +28,11 @@ import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Single
 import io.reactivex.rxjava3.schedulers.Schedulers
 import retrofit2.Call
-import retrofit2.Response
 import kotlin.collections.ArrayList
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import java.lang.Runnable
+import java.lang.ref.WeakReference
 import java.util.concurrent.Callable
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -47,6 +49,8 @@ interface  GetDataFromRetro{
 }
 //About Threads
 class WeatherForcastThread(var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro>, var mode: WETHER.Mode) : Runnable{
+
+    val weakReference = WeakReference(callBacks)
 
     var current: RetroDate? = null
 
@@ -66,7 +70,7 @@ class WeatherForcastThread(var callBacks: Pair<SetRetroDataToUI,GetDataFromRetro
 
 //About Handler
 var handler: Handler = @SuppressLint("HandlerLeak")
-object : Handler() {
+object : Handler(Looper.getMainLooper()) {
     override fun handleMessage(msg: Message) {
         val retro = msg.obj as RetroDate?
         retro?.let {
@@ -74,6 +78,7 @@ object : Handler() {
         }
     }
 }
+
 class WeatherForcastHandler(var mode: WETHER.Mode) : Runnable{
     val msg: Message = handler.obtainMessage()
     var weather: RetroDate? = null
@@ -105,24 +110,39 @@ class WeatherForcastAsync(
 
     }
     override fun onPostExecute(result: RetroDate?) {
-        result?.let{callBacks.first.fillData(it)}
         super.onPostExecute(result)
+        result?.let{callBacks.first.fillData(it)}
     }
 }
 
 //About VM
 class MyVM() : ViewModel(){
-    private var forcast: MutableLiveData<Single<RetroDate?>> = MutableLiveData()
+    private val _forcast: MutableLiveData<RetroDate?> = MutableLiveData()
+    private val forecast: LiveData<RetroDate?> = _forcast
+
     private var current: MutableLiveData<Single<RetroDate?>> = MutableLiveData()
 
     fun updateForecast() {
         try {
-            val single_Forecast: Single<RetroDate?> = Single.create {
-                it.onSuccess(
-                    RetrofitClient.getWeatherForecast().execute().body()
+//            val single_Forecast: Single<RetroDate?> = Single.create {
+//                it.onSuccess(
+//                    RetrofitClient.getWeatherForecast().execute().body()
+//                )
+//            }
+
+            RetrofitClient
+                .getWeatherForecast()
+                .subscribeOn(Schedulers.io())
+                .subscribe(
+                    {
+                        _forcast.value = it
+                    },
+                    {
+                        Log.e("", "$it")
+                    }
                 )
-            }
-            forcast.value = single_Forecast
+
+//            _forcast.value = single_Forecast
         }catch (ex: Exception){
             Log.e("Exception.MV", ex.message!!)
         }
@@ -139,15 +159,31 @@ class MyVM() : ViewModel(){
             Log.e("Exception.MV", ex.message!!)
         }
     }
-    fun getForecast() = forcast
+    fun getForecast() = _forcast
     fun getCurrent() = current
 
 }
 
 //About Loader
-class WetherLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(context) {
+class WetherLoader(val mode: WETHER.Mode, context: Context, args: Bundle?) : AsyncTaskLoader<RetroDate?>(context) {
     val LOG_TAG = "Loader"
     var weatherAsync: WeatherAsync? = null
+
+
+    override fun loadInBackground(): RetroDate? {
+        // Async work
+        when(mode){
+            WETHER.Mode.CURRENT -> callBacks.second.getCurrent().execute().body()
+            WETHER.Mode.FORWEEK -> callBacks.second.getForcast().execute().body()
+
+        }
+    }
+
+    // onLoadComplete
+
+
+
+
 
     override fun onForceLoad() {//Loader job
         super.onForceLoad()
@@ -158,6 +194,7 @@ class WetherLoader(context: Context?, args: Bundle?) : Loader<RetroDate?>(contex
         WeatherAsync(WETHER.callPair,WETHER.Mode.CURRENT)
             .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR) as WeatherAsync
     }
+
 
     fun getResultFromTask(result: RetroDate?) {
         deliverResult(result)
@@ -250,7 +287,7 @@ object WETHER{
     }
 }
 class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDate?>  {
-    val scope = CoroutineScope(Job())
+    val scope = CoroutineScope(SupervisorJob())
 //    lateinit var myMV: MyVM
     val LOG_TAG = "Loader"
     val LOADER_ID = 1
@@ -259,6 +296,15 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
     private lateinit var TomorrowCheck: Array<CheckBox>
     private lateinit var RigText: Array<TextView>
     private var myslider: MCustomView? = null
+
+    var handler: Handler = object : Handler(mainLooper) {
+        override fun handleMessage(msg: Message) {
+            val retro = msg.obj as RetroDate?
+            retro?.let {
+                WETHER.callPair.first.fillData(retro)
+            }
+        }
+    }
 
     override fun onPause() {
         myslider?.let {
@@ -559,18 +605,21 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
                 Log.e("MultiThreadingTest", "Coroutines")
                 scope.launch {
                     val current = scope.async {
-                        callBacks.second.getCurrent().execute().body()
-                    }.await()
+                        RetrofitClient.getWeatherForecast().daily
+//                        callBacks.second.getCurrent().execute().body()
+                    }
+
                     val forecast = scope.async {
                         callBacks.second.getForcast().execute().body()
-                    }.await()
-                    current?.let { callBacks.first.fillData(current)}
-                    forecast?.let { callBacks.first.fillData(forecast)}
+                    }
+
+                    current?.let { callBacks.first.fillData(current.await())}
+                    forecast?.let { callBacks.first.fillData(forecast.await())}
                 }
             }
             MultyThreadingMethod.HANDLER -> {//With Livedata & ModelView & little RX
                 Log.e("MultiThreadingTest", "Handler")
-                Thread(WeatherForcastHandler(WETHER.Mode.FORWEEK)).start()
+                val thread = Thread(WeatherForcastHandler(WETHER.Mode.FORWEEK)).start()
                 Thread(WeatherForcastHandler(WETHER.Mode.CURRENT)).start()
             }
         }
@@ -607,6 +656,7 @@ class MainActivity : AppCompatActivity(), LoaderManager.LoaderCallbacks<RetroDat
         super.onDestroy()
         scope.cancel()
     }
+
 }
 
 

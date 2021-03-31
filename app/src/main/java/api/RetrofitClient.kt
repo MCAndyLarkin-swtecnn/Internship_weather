@@ -8,6 +8,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import api.model.CurrentWeatherForecast
 import api.model.WeatherForecast
+import io.reactivex.rxjava3.core.Single
 
 private const val BASE_URL = "https://api.openweathermap.org"
 
@@ -29,7 +30,7 @@ object RetrofitClient {
             .build()
     }
 
-    fun getWeatherForecast(): Call<WeatherForecast> {
+    suspend fun getWeatherForecast(): WeatherForecast {
         return api.getWeatherForecast()
     }
 
